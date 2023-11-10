@@ -5,11 +5,12 @@
  *  Stefan Johansson, stefanj@cs.umu.se
  */
 #pragma once
-#define GLFW_INCLUDE_NONE
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include "3dstudio.h"
+
 
 class OpenGLWindow
 {

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 project(proyecto)
 
 set(CMAKE_CXX_STANDARD 11)
-
+set(CMAKE_TOOLCHAIN_FILE "C:/src/vcpkg/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 # Copy shaders to build directory
 file(GLOB SHADER_SOURCES "shaders/*.glsl")
 foreach(SHADER ${SHADER_SOURCES})
@@ -16,7 +16,7 @@ set(GLFW_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/glfw3")
 # Locating libraries
 find_package(OpenGL)
 find_package(GLEW)
-find_package(glfw3 PATHS ${GLFW_DIR})
+find_package(glfw3)
 
 # Create executable
 add_executable(proyecto
@@ -55,7 +55,7 @@ IF (GLEW_FOUND)
 ELSE ()
     message(STATUS "Linking GLEW from lib/glew-2.1.0/build/cmake...")
     target_include_directories(proyecto PRIVATE ${PROJECT_SOURCE_DIR}/include/glew/include)
-    target_link_libraries(proyecto glew32)
+    target_link_libraries(proyecto ${PROJECT_SOURCE_DIR}/include/glew/lib/glew32.lib)
 ENDIF ()
 
 
@@ -65,7 +65,7 @@ IF (glfw3_FOUND)
     target_link_libraries(proyecto glfw)
 ELSE ()
     message(STATUS "Linking GLFW from lib/glfw-3.3.8...")
-    target_include_directories(proyecto PRIVATE ${PROJECT_SOURCE_DIR}/include/glfw3)
-    target_link_libraries(proyecto ${PROJECT_SOURCE_DIR}/include/glfw3/lib)
+    target_include_directories(proyecto PRIVATE ${PROJECT_SOURCE_DIR}/include/glfw3/include)
+    target_link_libraries(proyecto ${PROJECT_SOURCE_DIR}/include/glfw3/lib/glfw3dll.lib)
 ENDIF ()
 ENDIF ()
