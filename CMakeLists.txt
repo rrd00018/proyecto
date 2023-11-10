@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(FinalProject)
+project(proyecto)
 
 set(CMAKE_CXX_STANDARD 17)
 # STAGE 1: CREATING THE EXECUTABLE
@@ -46,7 +46,7 @@ ELSE()
 ENDIF ()
 
 # Create executable
-add_executable(3dstudio.h geometryrender.cpp geometryrender.h main.cpp openglwindow.cpp openglwindow.h)
+add_executable(main.cpp 3dstudio.h geometryrender.cpp geometryrender.h openglwindow.cpp openglwindow.h)
 
 # STAGE 2: LINKING LIBRARIES
 # Set compiler flags
@@ -56,7 +56,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g3 -ggdb3 -fno-inline -Wall -std=c+
 IF (OPENGL_FOUND)
     message(STATUS "Linking OpenGL from system (" ${OPENGL_INCLUDE_DIR} ") (" ${OPENGL_LIBRARIES} ")")
     include_directories(${OPENGL_INCLUDE_DIR})
-    target_link_libraries(${TARGET} opengl32 ${OPENGL_LIBRARIES})
+    target_link_libraries(${TARGET} OpenGL::GL)
 ELSE ()
     message(FATAL_ERROR "OpenGL not found")
 ENDIF ()
@@ -68,9 +68,7 @@ IF (GLEW_FOUND)
     target_link_libraries(${TARGET} ${GLEW_LIBRARIES})
 ELSE ()
     message(STATUS "Linking GLEW from lib/glew-2.1.0/build/cmake...")
-    target_include_directories(${TARGET} PRIVATE
-            ${PROJECT_SOURCE_DIR}/lib/glew-2.1.0/include
-    )
+    include_directories(${TARGET} ${PROJECT_SOURCE_DIR}/lib/glew/include)
     target_link_libraries(${TARGET} glew_s)
 ENDIF ()
 
