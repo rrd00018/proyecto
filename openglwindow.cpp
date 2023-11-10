@@ -193,7 +193,7 @@ OpenGLWindow::initProgram(const string vShaderFile, const string fShaderFile) co
 void 
 OpenGLWindow::resizeCallback(GLFWwindow* window, int width, int height)
 {
-
+    reshape(width,height);
 }
 
 // GLFW error callback function
@@ -228,4 +228,8 @@ void OpenGLWindow::displayNow()
         return;
 
     display();
+}
+
+void OpenGLWindow::reshape(const int width, const int height) const {
+    glViewport(-1,-1,width,height);
 }
