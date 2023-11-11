@@ -22,6 +22,11 @@ class glfwCallbackManager
         if(app) 
             app->resizeCallback(window,width,height);
     }
+
+    static void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods){
+        if(app)
+            app->keyCallBack(window,key,scancode,action,mods);
+    }
     
 public:
     static void initCallbacks(OpenGLWindow* glfwapp)
@@ -30,5 +35,6 @@ public:
         
         glfwSetErrorCallback(errorCallback);
         glfwSetFramebufferSizeCallback(app->window() , resizeCallback);
+        glfwSetKeyCallback(app->window(),keyCallBack);
     }
 };

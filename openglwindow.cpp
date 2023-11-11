@@ -203,6 +203,10 @@ OpenGLWindow::errorCallback(int error, const char* description)
     cerr << "GLFW error: " << description << endl;
 }
 
+void OpenGLWindow::keyCallBack(GLFWwindow *window, int key, int scancode, int action, int mods) {
+
+}
+
 // Start the GLFW loop
 void 
 OpenGLWindow::start()

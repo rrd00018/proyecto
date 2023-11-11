@@ -15,12 +15,16 @@
 #define BUFFER_OFFSET(i) (reinterpret_cast<char*>(0 + (i)))
 
 // Vector and matrix operations
-struct Vec2 {
-    float values[2];
+struct Vec4 {
+    float values[4];
 public:
-    Vec2 (const float x, const float y){ this->values[0] = x; this->values[1] = y;}
+    Vec4 (const float x, const float y, const float z, const float w){ this->values[0] = x; this->values[1] = y, this->values[2] = z, this->values[3] = w;}
 };
-
+struct Vec3 {
+    float values[3];
+public:
+    Vec3 (const float x, const float y, const float z){ this->values[0] = x; this->values[1] = y, this->values[2] = z;}
+};
 // *************
 // Debug macros
 
