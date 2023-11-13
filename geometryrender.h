@@ -64,4 +64,6 @@ private:
     void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods) override;
 
     void loadObjFile(std::string fileName);
+
+    float verticesDimension( const std::vector<Vec4>& vertices, int dimension);
 };

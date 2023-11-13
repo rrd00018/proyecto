@@ -10,6 +10,9 @@
 using namespace std;
 
 // Initialize OpenGL
+/**
+ * @brief initializes OpenGL and the shaders
+ */
 void GeometryRender::initialize()
 {
     // Enable depth test
@@ -46,7 +49,9 @@ void GeometryRender::initialize()
     loadGeometry();
 
 }
-
+/**
+ * @brief Reload the vao with the new attribs of the figure
+ */
 void GeometryRender::loadGeometry(void)
 {
     if(vertices.empty()) {
@@ -96,13 +101,13 @@ void GeometryRender::debugShader(void) const
 
 // Render object
 /**
- * @brief
+ * @brief display the current object located into the vertex and indexes array
  */
 void GeometryRender::display()
 {
     glUseProgram(program);
     glBindVertexArray(vao);
-
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Call OpenGL to draw the triangle
@@ -242,6 +247,9 @@ void GeometryRender::rotatey(float a) {
  * O-> charge OBJ file from resources
  */
 void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    if(action != GLFW_PRESS){ //Evita que una liberacion de tecla o cualquier otra accion modifique el programa
+        return;
+    }
     switch(key){
         case GLFW_KEY_UP:
             rotatey(10);
@@ -302,6 +310,11 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
     }
 }
 
+/**
+ * @brief Load an OBJ file into the vertex array
+ * @param fileName name of the file
+ * @post FILE IS LOCATED IN THE RESOURCES FOLDER
+ */
 void GeometryRender::loadObjFile(std::string fileName) {
     std::string nombre = "../resources/"+fileName;
     std::cout << nombre << std::endl;
@@ -332,6 +345,39 @@ void GeometryRender::loadObjFile(std::string fileName) {
             }
         }
     }
+    //Calculate scalate factor as 1/maxDimension
+    float maxDimension = std::max(std::max(verticesDimension(vertices, 0), verticesDimension(vertices, 1)), verticesDimension(vertices, 2));
+    float scaleFactor = 1.0f / maxDimension;
+
+    //Apply the scalate factor to each coordinate of vertexs
+    for (int i = 0; i < vertices.size(); i++) {
+        vertices[i].values[0] *= scaleFactor;
+        vertices[i].values[1] *= scaleFactor;
+        vertices[i].values[2] *= scaleFactor;
+    }
 
     loadGeometry();
+    display();
+}
+
+/**
+ * @brief used to calculate the maximum dimension of the vertices in a specific dimension
+ * @param vertices vector of vertices
+ * @param dimension 0-> x 1->y 2->z
+ * @return float value of the dimension
+ */
+float GeometryRender::verticesDimension(const std::vector<Vec4>& vertices, int dimension) {
+    float maxCoord = std::numeric_limits<float>::lowest();
+    float minCoord = std::numeric_limits<float>::max();
+
+    for (const auto& vertex : vertices) {
+        if (vertex.values[dimension] > maxCoord) {
+            maxCoord = vertex.values[dimension];
+        }
+        if (vertex.values[dimension] < minCoord) {
+            minCoord = vertex.values[dimension];
+        }
+    }
+
+    return maxCoord - minCoord;
 }
