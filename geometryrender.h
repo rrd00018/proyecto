@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <iostream>
 
 typedef float Mat4x4[16];
 
@@ -25,10 +26,11 @@ public:
 
     void initialize();
     virtual void display() override;
-    void processIput(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 private:
     GLuint program;
+
+    bool debug = false;
 
     // OpenGL buffers
     GLuint vao;

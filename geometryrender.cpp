@@ -116,7 +116,16 @@ void GeometryRender::display()
 
     // Not to be called in release...
     debugShader();
+    if(debug) {
+        for (int i = 0; i < vertices.size(); i++) {
+            std::cout << vertices[i].values[0] << " " << vertices[i].values[1] << " " << vertices[i].values[2] << endl;
+        }
 
+        for (int i = 0; i < indices.size(); i += 3) {
+            std::cout << indices[i] << " " << indices[i + 1] << " " << indices[i + 2] << endl;
+        }
+        std::cout << "----------------------------------" << std::endl;
+    }
     glBindVertexArray(0);
     glUseProgram(0);
 
@@ -317,34 +326,51 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
  */
 void GeometryRender::loadObjFile(std::string fileName) {
     std::string nombre = "../resources/"+fileName;
-    std::cout << nombre << std::endl;
-    std::ifstream objFile(nombre);
-    if (!objFile.is_open()) {
-        std::cerr << "Error opening file." << std::endl;
+    std::ifstream file(nombre);
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file: " << nombre << std::endl;
     }
+
     vertices.clear();
     indices.clear();
+
     std::string line;
-    while (std::getline(objFile, line)) {
+    while (std::getline(file, line)) {
         std::istringstream iss(line);
+
+        // Lee la primera palabra de la línea para determinar el tipo de entrada
         std::string type;
         iss >> type;
 
+        // Procesa la entrada basada en su tipo
         if (type == "v") {
-            Vec4 vertex(0,0,0,1);
+            // Lee las coordenadas de un vértice y crea un objeto Vec4 para representarlo
+            Vec4 vertex(0, 0, 0, 1);
             iss >> vertex.values[0] >> vertex.values[1] >> vertex.values[2];
             vertices.push_back(vertex);
         } else if (type == "f") {
-            int index;
-            while (iss >> index) {
-                indices.push_back(index);
-                // Manejar el carácter '/' si es necesario
-                char c;
-                if (iss >> c && c == '/')
-                    iss.ignore(std::numeric_limits<std::streamsize>::max(), ' ');
+            // Lee los índices de una cara y los agrega al vector de índices
+            std::stringstream linea(line);
+            std::string values = line.substr(2,line.size()-2); //Coge los datos eliminando el prefijo
+            std::stringstream ss(values);
+            std::vector<string> v = {"","",""};
+            for(int i = 0; i < v.size(); i++) {
+                getline(ss, v[i], ' '); //Carga en cada posicion del vetor v una de las tuplas de datos
+                std::stringstream s1(v[i]);
+                getline(s1, v[i], '/'); //Cuando llega a la primera barra para para coger el indice
+                int index = stoi(v[i]);
+                indices.push_back(index-1);
             }
+
+        } else if (type == "vn"){
+
+        } else if (type == "vt"){
+
         }
     }
+    file.close();
+
+
     //Calculate scalate factor as 1/maxDimension
     float maxDimension = std::max(std::max(verticesDimension(vertices, 0), verticesDimension(vertices, 1)), verticesDimension(vertices, 2));
     float scaleFactor = 1.0f / maxDimension;
