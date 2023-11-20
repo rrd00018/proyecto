@@ -8,6 +8,8 @@
 
 #include "openglwindow.h"
 #include <glm/glm.hpp>
+#include "glm/ext.hpp"
+#include "glm/gtx/string_cast.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <fstream>
@@ -44,14 +46,13 @@ private:
     std::vector<Vec4> vertices;
     std::vector<unsigned int> indices;
 
+    GLuint locModel;
+
     void debugShader(void) const;
 
     void loadGeometry(void);
 
-    Mat4x4 matModel = {1.0, 0.0, 0.0, 0.0,
-                       0.0, 1.0, 0.0, 0.0,
-                       0.0, 0.0, 1.0, 0.0,
-                       0.0, 0.0, 0.0, 1.0};
+    glm::mat4 matModel;
 
     void translate(float x, float y, float z);
 
@@ -67,5 +68,7 @@ private:
 
     void loadObjFile(std::string fileName);
 
-    float verticesDimension( const std::vector<Vec4>& vertices, int dimension);
+    static float verticesDimension( const std::vector<Vec4>& vertices, int dimension);
+
+    std::vector<float> getOrigin(const std::vector<Vec4>& vertices);
 };

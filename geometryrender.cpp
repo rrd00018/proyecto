@@ -22,9 +22,9 @@ void GeometryRender::initialize()
     program = initProgram("vshader.glsl", "fshader.glsl");
     // Installs the program object as part of current rendering state
     glUseProgram(program);
-    GLuint locModel;
     locModel = glGetUniformLocation(program,"M");
-    glUniformMatrix4fv(locModel, 1, GL_TRUE, matModel);
+    matModel = glm::mat4(1.0f);
+    glUniformMatrix4fv(locModel, 1, GL_TRUE,glm::value_ptr(matModel));
 
     // Creat a vertex array object
     glGenVertexArrays(1, &vao);
@@ -124,6 +124,12 @@ void GeometryRender::display()
         for (int i = 0; i < indices.size(); i += 3) {
             std::cout << indices[i] << " " << indices[i + 1] << " " << indices[i + 2] << endl;
         }
+        for(int i = 0; i < 4; i++){
+            for(int j = 0; j < 4; j++){
+                std::cout << matModel[i][j] << " ";
+            }
+            std::cout << endl;
+        }
         std::cout << "----------------------------------" << std::endl;
     }
     glBindVertexArray(0);
@@ -138,19 +144,12 @@ void GeometryRender::display()
  * @param z Floating units to translate in z
  */
 void GeometryRender::translate(float x, float y, float z) {
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::translate(trans, glm::vec3(x, y, z));
-
-    for (int i = 0; i < vertices.size(); i++) {
-        glm::vec4 vertex = glm::vec4(vertices[i].values[0], vertices[i].values[1], vertices[i].values[2], vertices[i].values[3]);
-        vertex = trans * vertex;
-
-        vertices[i].values[0] = vertex.x;
-        vertices[i].values[1] = vertex.y;
-        vertices[i].values[2] = vertex.z;
-        vertices[i].values[3] = vertex.w;
-    }
-    loadGeometry();
+    glUseProgram(program);
+    glm::mat4 tempModel = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+    //matModel = glm::translate(matModel, glm::vec3(x, y, z));
+    matModel = tempModel * matModel;
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
+    display();
 }
 
 /**
@@ -160,19 +159,10 @@ void GeometryRender::translate(float x, float y, float z) {
  * @param z Scale in z-axis
  */
 void GeometryRender::scale(float x, float y, float z) {
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::scale(trans, glm::vec3(x, y, z));
-
-    for (int i = 0; i < vertices.size(); i++) {
-        glm::vec4 vertex = glm::vec4(vertices[i].values[0], vertices[i].values[1], vertices[i].values[2], vertices[i].values[3]);
-        vertex = trans * vertex;
-
-        vertices[i].values[0] = vertex.x;
-        vertices[i].values[1] = vertex.y;
-        vertices[i].values[2] = vertex.z;
-        vertices[i].values[3] = vertex.w;
-    }
-    loadGeometry();
+    glUseProgram(program);
+    matModel = glm::scale(matModel, glm::vec3(x, y, z));
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
+    display();
 }
 
 
@@ -181,19 +171,10 @@ void GeometryRender::scale(float x, float y, float z) {
  * @param a degrees of rotation, cna be + or -
  */
 void GeometryRender::rotatez(float a) {
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::rotate(trans, glm::degrees(a), glm::vec3(0, 0, 1));
-
-    for (int i = 0; i < vertices.size(); i++) {
-        glm::vec4 vertex = glm::vec4(vertices[i].values[0], vertices[i].values[1], vertices[i].values[2], vertices[i].values[3]);
-        vertex = trans * vertex;
-
-        vertices[i].values[0] = vertex.x;
-        vertices[i].values[1] = vertex.y;
-        vertices[i].values[2] = vertex.z;
-        vertices[i].values[3] = vertex.w;
-    }
-    loadGeometry();
+    glUseProgram(program);
+    matModel = glm::rotate(matModel, glm::degrees(a), glm::vec3(0, 0, 1));
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
+    display();
 }
 
 
@@ -202,19 +183,11 @@ void GeometryRender::rotatez(float a) {
  * @param a degrees of rotation, cna be + or -
  */
 void GeometryRender::rotatex(float a) {
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::rotate(trans, glm::degrees(a), glm::vec3(1, 0, 0));
-
-    for (int i = 0; i < vertices.size(); i++) {
-        glm::vec4 vertex = glm::vec4(vertices[i].values[0], vertices[i].values[1], vertices[i].values[2], vertices[i].values[3]);
-        vertex = trans * vertex;
-
-        vertices[i].values[0] = vertex.x;
-        vertices[i].values[1] = vertex.y;
-        vertices[i].values[2] = vertex.z;
-        vertices[i].values[3] = vertex.w;
-    }
-    loadGeometry();
+    glUseProgram(program);
+    glm::mat4 tempModel= glm::rotate(matModel, glm::degrees(a), glm::vec3(1, 0, 0));
+    matModel = tempModel * matModel;
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
+    display();
 }
 
 
@@ -223,19 +196,12 @@ void GeometryRender::rotatex(float a) {
  * @param a degrees of rotation, cna be + or -
  */
 void GeometryRender::rotatey(float a) {
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::rotate(trans, glm::degrees(a), glm::vec3(0, 1, 0));
+    glUseProgram(program);
+    glm::mat4 tempModel = glm::rotate(matModel, glm::degrees(a), glm::vec3(0, 1, 0));
+    matModel = tempModel * matModel;
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
+    display();
 
-    for (int i = 0; i < vertices.size(); i++) {
-        glm::vec4 vertex = glm::vec4(vertices[i].values[0], vertices[i].values[1], vertices[i].values[2], vertices[i].values[3]);
-        vertex = trans * vertex;
-
-        vertices[i].values[0] = vertex.x;
-        vertices[i].values[1] = vertex.y;
-        vertices[i].values[2] = vertex.z;
-        vertices[i].values[3] = vertex.w;
-    }
-    loadGeometry();
 }
 
 /**
@@ -325,7 +291,7 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
  * @post FILE IS LOCATED IN THE RESOURCES FOLDER
  */
 void GeometryRender::loadObjFile(std::string fileName) {
-    std::string nombre = "../resources/"+fileName;
+    std::string nombre = "../resources/"+fileName+".obj";
     std::ifstream file(nombre);
     if (!file.is_open()) {
         std::cerr << "Error: Unable to open file: " << nombre << std::endl;
@@ -406,4 +372,24 @@ float GeometryRender::verticesDimension(const std::vector<Vec4>& vertices, int d
     }
 
     return maxCoord - minCoord;
+}
+
+
+/**
+ * @brief Calcula la translacion necesaria para llevar una figura al origen
+ * @param vertices vector de vertices de la figura
+ * @return
+ */
+    std::vector<float> GeometryRender::getOrigin(const std::vector<Vec4>& vertices){
+    // Calcular el centro de masa de la figura
+    std::vector<float> center= {0.0f, 0.0f, 0.0f};
+    for (const auto& vertex : vertices) {
+        center[0] += vertex.values[0];
+        center[1] += vertex.values[1];
+        center[2] += vertex.values[2];
+    }
+    for(int i = 0; i < center.size(); i++){
+        center[i] /= static_cast<float>(vertices.size());
+    }
+    return center;
 }
