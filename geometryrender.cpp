@@ -117,13 +117,6 @@ void GeometryRender::display()
     // Not to be called in release...
     debugShader();
     if(debug) {
-        for (int i = 0; i < vertices.size(); i++) {
-            std::cout << vertices[i].values[0] << " " << vertices[i].values[1] << " " << vertices[i].values[2] << endl;
-        }
-
-        for (int i = 0; i < indices.size(); i += 3) {
-            std::cout << indices[i] << " " << indices[i + 1] << " " << indices[i + 2] << endl;
-        }
         for(int i = 0; i < 4; i++){
             for(int j = 0; j < 4; j++){
                 std::cout << matModel[i][j] << " ";
@@ -172,7 +165,7 @@ void GeometryRender::scale(float x, float y, float z) {
  */
 void GeometryRender::rotatez(float a) {
     glUseProgram(program);
-    matModel = glm::rotate(matModel, glm::degrees(a), glm::vec3(0, 0, 1));
+    matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(0, 0, 1));
     glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
     display();
 }
@@ -184,8 +177,10 @@ void GeometryRender::rotatez(float a) {
  */
 void GeometryRender::rotatex(float a) {
     glUseProgram(program);
-    glm::mat4 tempModel= glm::rotate(matModel, glm::degrees(a), glm::vec3(1, 0, 0));
-    matModel = tempModel * matModel;
+   // glm::mat4 tempModel= glm::rotate(matModel, glm::radians(a), glm::vec3(1, 0, 0));
+    //matModel = matModel * tempModel;
+    matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(1, 0, 0));
+
     glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
     display();
 }
@@ -197,8 +192,7 @@ void GeometryRender::rotatex(float a) {
  */
 void GeometryRender::rotatey(float a) {
     glUseProgram(program);
-    glm::mat4 tempModel = glm::rotate(matModel, glm::degrees(a), glm::vec3(0, 1, 0));
-    matModel = tempModel * matModel;
+    matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(0, 1, 0));
     glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
     display();
 
@@ -273,6 +267,7 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             break;
 
         case GLFW_KEY_ESCAPE:
+            //scale(1.5,1.5,1.5);
             glfwSetWindowShouldClose(window,GLFW_TRUE);
             break;
 
@@ -347,7 +342,7 @@ void GeometryRender::loadObjFile(std::string fileName) {
         vertices[i].values[1] *= scaleFactor;
         vertices[i].values[2] *= scaleFactor;
     }
-
+    matModel = glm::mat4 (1.0f);
     loadGeometry();
     display();
 }

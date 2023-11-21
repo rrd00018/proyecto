@@ -32,7 +32,8 @@ public:
 private:
     GLuint program;
 
-    bool debug = false;
+    bool debug = true;
+    int degrees = 0;
 
     // OpenGL buffers
     GLuint vao;
