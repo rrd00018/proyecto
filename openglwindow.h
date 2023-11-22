@@ -10,7 +10,12 @@
 #include <GLFW/glfw3.h>
 
 #include "3dstudio.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "ImGuiFileDialog.h"
 
+const float pi_f = 3.1415926f;
 
 class OpenGLWindow
 {
@@ -38,7 +43,20 @@ protected:
 
     void reshape(const int width, const int height) const;
 
+    std::string objFileName;
+    std::string objFilePath;
+
+    float fov = 60.0f;
+    float farplane = 500.0f;
+    float top = 1.0f;
+    float obliqueScale = 0.0f;
+    float obliqueAngleRad = pi_f/4.0f;
+
 private:
+
+
+    virtual void DrawGui() = 0;
+
     GLFWwindow* glfwWindow;
     int windowWidth = 0;
     int windowHeight = 0;

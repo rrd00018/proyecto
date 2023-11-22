@@ -48,6 +48,21 @@ OpenGLWindow::OpenGLWindow(string title, int width, int height)
         cout << "Decreace supported OpenGL version if needed." << endl;
     }
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+// Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+// Enable Gamepad Controls
+//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+// Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+//ImGui::StyleColorsClassic();
+// Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
+    ImGui_ImplOpenGL3_Init(NULL);
+
     // Set graphics attributes
     glPointSize(5.0); // Unsupported in OpenGL ES 2.0
     glLineWidth(1.0);
@@ -60,6 +75,9 @@ OpenGLWindow::~OpenGLWindow()
 {
     glfwDestroyWindow(glfwWindow);
     glfwTerminate();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 // OpenGL error handler
@@ -211,19 +229,37 @@ void OpenGLWindow::keyCallBack(GLFWwindow *window, int key, int scancode, int ac
 void 
 OpenGLWindow::start()
 {
+    //bool show_demo_window = false;
+
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(glfwWindow)) {
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // ImGui example gui
+        //ImGui::ShowDemoWindow(&show_demo_window);
+
+        // Draw the gui
+        DrawGui();
+
         // Call display in geomentryRender to render the scene
         display();
-        
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         // Swap buffers
         glfwSwapBuffers(glfwWindow);
 
         // Sleep and wait for an event
         glfwWaitEvents();
     }
-    
+
 }
+    
+
 
 // Render the scene 
 void OpenGLWindow::displayNow()
@@ -237,3 +273,4 @@ void OpenGLWindow::displayNow()
 void OpenGLWindow::reshape(const int width, const int height) const {
     glViewport(-1,-1,width,height);
 }
+

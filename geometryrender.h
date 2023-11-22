@@ -32,7 +32,7 @@ public:
 private:
     GLuint program;
 
-    bool debug = true;
+    bool debug = false;
     int degrees = 0;
 
     // OpenGL buffers
@@ -70,6 +70,8 @@ private:
     void loadObjFile(std::string fileName);
 
     static float verticesDimension( const std::vector<Vec4>& vertices, int dimension);
+
+    virtual void DrawGui() override;
 
     std::vector<float> getOrigin(const std::vector<Vec4>& vertices);
 };

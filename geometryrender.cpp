@@ -267,7 +267,6 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             break;
 
         case GLFW_KEY_ESCAPE:
-            //scale(1.5,1.5,1.5);
             glfwSetWindowShouldClose(window,GLFW_TRUE);
             break;
 
@@ -286,7 +285,7 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
  * @post FILE IS LOCATED IN THE RESOURCES FOLDER
  */
 void GeometryRender::loadObjFile(std::string fileName) {
-    std::string nombre = "../resources/"+fileName+".obj";
+    std::string nombre = objFilePath+"/"+objFileName;
     std::ifstream file(nombre);
     if (!file.is_open()) {
         std::cerr << "Error: Unable to open file: " << nombre << std::endl;
@@ -344,7 +343,6 @@ void GeometryRender::loadObjFile(std::string fileName) {
     }
     matModel = glm::mat4 (1.0f);
     loadGeometry();
-    display();
 }
 
 /**
@@ -388,3 +386,47 @@ float GeometryRender::verticesDimension(const std::vector<Vec4>& vertices, int d
     }
     return center;
 }
+
+void GeometryRender::DrawGui() {
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context.");
+
+    static ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
+    static ImGuiFileDialog fileDialog;
+
+    ImGui::Begin("3D Studio");
+
+    if (ImGui::CollapsingHeader("OBJ File")) {
+        ImGui::Text("OBJ file: %s", objFileName.c_str());
+        if (ImGui::Button("Open File"))
+            fileDialog.OpenDialog("ChooseFileDlgKey", "Choose File", ".obj", ".");
+
+        if (fileDialog.Display("ChooseFileDlgKey")) {
+            if (fileDialog.IsOk() == true) {
+                objFileName = fileDialog.GetCurrentFileName();
+                objFilePath = fileDialog.GetCurrentPath();
+                cout << "OBJ file: " << objFileName << endl << "Path: " << objFilePath << endl;
+                loadObjFile(objFileName);
+                cout << "Muestra" << endl;
+            }
+            fileDialog.Close();
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Projection")) {
+        const char* items[] = {"Perspective", "Parallel" };
+        static int proj_current_idx = 0;
+        if (ImGui::Combo("projektion", &proj_current_idx, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)));
+        if (proj_current_idx == 0) {
+            ImGui::SliderFloat("Field of view",&fov, 20.0f, 160.0f, "%1.0f", flags);
+            ImGui::SliderFloat("Far",&farplane, 1.0f, 1000.0f, "%1.0f", flags);
+        }
+        if (proj_current_idx == 1) {
+            ImGui::SliderFloat("Top",&top, 1.0f, 100.0f, "%.1f", flags);
+            ImGui::SliderFloat("Far",&farplane, 1.0f, 1000.0f, "%1.0f", flags);
+            ImGui::SliderFloat("Oblique scale",&obliqueScale, 0.0f, 1.0f, "%.1f", flags);
+            ImGui::SliderAngle("Oblique angle",&obliqueAngleRad, 15, 75, "%1.0f", flags);
+        }
+    }
+
+    ImGui::End();
+    }
