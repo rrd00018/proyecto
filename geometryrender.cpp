@@ -20,11 +20,27 @@ void GeometryRender::initialize()
 
     // Create and initialize a program object with shaders
     program = initProgram("vshader.glsl", "fshader.glsl");
+
     // Installs the program object as part of current rendering state
     glUseProgram(program);
+
+    //Get matrix locations for each matrix
     locModel = glGetUniformLocation(program,"M");
+    locView = glGetUniformLocation(program, "V");
+    locProjection = glGetUniformLocation(program, "P");
+
+    //Initializes matrixes
     matModel = glm::mat4(1.0f);
+    matProjection = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farplane);
+    glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
+    glm::vec3 lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
+    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    matView = glm::lookAt(cameraPosition, lookAt, upVector);
+
+    //Load the matrixes into the shader
     glUniformMatrix4fv(locModel, 1, GL_TRUE,glm::value_ptr(matModel));
+    glUniformMatrix4fv(locView,1,GL_TRUE,glm::value_ptr(matView));
+    glUniformMatrix4fv(locProjection,1,GL_TRUE,glm::value_ptr(matProjection));
 
     // Creat a vertex array object
     glGenVertexArrays(1, &vao);
@@ -107,6 +123,11 @@ void GeometryRender::display()
 {
     glUseProgram(program);
     glBindVertexArray(vao);
+
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
+    glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+    glUniformMatrix4fv(locProjection, 1, GL_FALSE, glm::value_ptr(matProjection));
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -119,7 +140,7 @@ void GeometryRender::display()
     if(debug) {
         for(int i = 0; i < 4; i++){
             for(int j = 0; j < 4; j++){
-                std::cout << matModel[i][j] << " ";
+                std::cout << matProjection[i][j] << " ";
             }
             std::cout << endl;
         }
@@ -137,12 +158,9 @@ void GeometryRender::display()
  * @param z Floating units to translate in z
  */
 void GeometryRender::translate(float x, float y, float z) {
-    glUseProgram(program);
     glm::mat4 tempModel = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
     //matModel = glm::translate(matModel, glm::vec3(x, y, z));
     matModel = tempModel * matModel;
-    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
-    display();
 }
 
 /**
@@ -152,50 +170,21 @@ void GeometryRender::translate(float x, float y, float z) {
  * @param z Scale in z-axis
  */
 void GeometryRender::scale(float x, float y, float z) {
-    glUseProgram(program);
     matModel = glm::scale(matModel, glm::vec3(x, y, z));
-    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
-    display();
 }
 
-
 /**
- * @brief rotate in z axis direction
+ * @brief rotate in axis direction
  * @param a degrees of rotation, cna be + or -
+ * @param axis axis to rotate around, 1->x 2->y 3->z
  */
-void GeometryRender::rotatez(float a) {
-    glUseProgram(program);
-    matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(0, 0, 1));
-    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
-    display();
-}
-
-
-/**
- * @brief rotate in x axis direction
- * @param a degrees of rotation, cna be + or -
- */
-void GeometryRender::rotatex(float a) {
-    glUseProgram(program);
-   // glm::mat4 tempModel= glm::rotate(matModel, glm::radians(a), glm::vec3(1, 0, 0));
-    //matModel = matModel * tempModel;
-    matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(1, 0, 0));
-
-    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
-    display();
-}
-
-
-/**
- * @brief rotate in y axis direction
- * @param a degrees of rotation, cna be + or -
- */
-void GeometryRender::rotatey(float a) {
-    glUseProgram(program);
-    matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(0, 1, 0));
-    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
-    display();
-
+void GeometryRender::rotate(float a,int axis) {
+    if(axis == 1)
+        matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(1, 0, 0));
+    else if(axis == 2)
+        matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(0, 1, 0));
+    else if(axis == 3)
+        matModel = glm::rotate(matModel, glm::radians(a), glm::vec3(0, 0, 1));
 }
 
 /**
@@ -219,21 +208,27 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
     if(action != GLFW_PRESS){ //Evita que una liberacion de tecla o cualquier otra accion modifique el programa
         return;
     }
+
+    glm::vec3 cameraRight = glm::vec3(matView[0][0], matView[1][0], matView[2][0]);
+    glm::vec3 cameraUp = glm::vec3(matView[0][1], matView[1][1], matView[2][1]);
+    glm::vec3 cameraFront = -glm::vec3(matView[0][2], matView[1][2], matView[2][2]);
+
+
     switch(key){
         case GLFW_KEY_UP:
-            rotatey(10);
+            rotate(10,2);
             break;
 
         case GLFW_KEY_DOWN:
-            rotatey(-10);
+            rotate(-10,2);
             break;
 
         case GLFW_KEY_LEFT:
-            rotatex(10);
+            rotate(10,1);
             break;
 
         case GLFW_KEY_RIGHT:
-            rotatex(-10);
+            rotate(-10,1);
             break;
         case GLFW_KEY_L:
             translate(0.1,0,0);
@@ -259,11 +254,11 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             translate(0,0,-0.1);
 
         case GLFW_KEY_KP_4:
-            rotatez(10);
+            rotate(10,3);
             break;
 
         case GLFW_KEY_KP_6:
-            rotatez(-10);
+            rotate(-10,3);
             break;
 
         case GLFW_KEY_ESCAPE:
@@ -271,10 +266,43 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             break;
 
         case GLFW_KEY_O:
-            std::cout << "Write file name: " << std::endl;
-            std::string file;
-            std::getline(std::cin,file);
-            loadObjFile(file);
+            loadObjFile();
+            break;
+
+        case GLFW_KEY_W:
+            // Move forward along the camera's negative z-axis
+            matView = glm::translate(matView, -translationSpeed * cameraFront);
+            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            break;
+
+        case GLFW_KEY_S:
+            // Move backward along the camera's positive z-axis
+            matView = glm::translate(matView, translationSpeed * cameraFront);
+            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            break;
+
+        case GLFW_KEY_A:
+            // Move left along the camera's negative x-axis
+            matView = glm::translate(matView, -translationSpeed * cameraRight);
+            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            break;
+
+        case GLFW_KEY_D:
+            // Move right along the camera's positive x-axis
+            matView = glm::translate(matView, translationSpeed * cameraRight);
+            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            break;
+
+        case GLFW_KEY_E:
+            // Move up along the camera's positive y-axis
+            matView = glm::translate(matView, translationSpeed * cameraUp);
+            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            break;
+
+        case GLFW_KEY_Q:
+            // Move down along the camera's negative y-axis
+            matView = glm::translate(matView, -translationSpeed * cameraUp);
+            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
             break;
     }
 }
@@ -284,7 +312,7 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
  * @param fileName name of the file
  * @post FILE IS LOCATED IN THE RESOURCES FOLDER
  */
-void GeometryRender::loadObjFile(std::string fileName) {
+void GeometryRender::loadObjFile() {
     std::string nombre = objFilePath+"/"+objFileName;
     std::ifstream file(nombre);
     if (!file.is_open()) {
@@ -405,7 +433,7 @@ void GeometryRender::DrawGui() {
                 objFileName = fileDialog.GetCurrentFileName();
                 objFilePath = fileDialog.GetCurrentPath();
                 cout << "OBJ file: " << objFileName << endl << "Path: " << objFilePath << endl;
-                loadObjFile(objFileName);
+                loadObjFile();
                 cout << "Muestra" << endl;
             }
             fileDialog.Close();
@@ -419,13 +447,39 @@ void GeometryRender::DrawGui() {
         if (proj_current_idx == 0) {
             ImGui::SliderFloat("Field of view",&fov, 20.0f, 160.0f, "%1.0f", flags);
             ImGui::SliderFloat("Far",&farplane, 1.0f, 1000.0f, "%1.0f", flags);
+
+            aspectRatio = (float) width()/height();
+            matProjection = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farplane);
+
+            if(debug){
+                std::cout << "Projection Matrix:" << std::endl;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        std::cout << matProjection[i][j] << " ";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << "----------------------------------" << std::endl;
+            }
         }
         if (proj_current_idx == 1) {
             ImGui::SliderFloat("Top",&top, 1.0f, 100.0f, "%.1f", flags);
             ImGui::SliderFloat("Far",&farplane, 1.0f, 1000.0f, "%1.0f", flags);
             ImGui::SliderFloat("Oblique scale",&obliqueScale, 0.0f, 1.0f, "%.1f", flags);
             ImGui::SliderAngle("Oblique angle",&obliqueAngleRad, 15, 75, "%1.0f", flags);
+
+            right = top * aspectRatio;
+            left = -right;
+            bottom = -top;
+
+            matProjection = glm::ortho(left, right, bottom, top, farplane, nearPlane);
+
+            // Apply oblique projection if needed
+            if (obliqueScale > 0.0f) {
+                matProjection[2][0] = obliqueScale * glm::tan(obliqueAngleRad);
+            }
         }
+
     }
 
     ImGui::End();

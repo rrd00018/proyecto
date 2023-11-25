@@ -17,8 +17,6 @@
 #include <string>
 #include <iostream>
 
-typedef float Mat4x4[16];
-
 class GeometryRender : public OpenGLWindow
 {
 public:
@@ -26,7 +24,7 @@ public:
     GeometryRender(ARGS&&... args) : OpenGLWindow{ std::forward<ARGS>(args)... }
     {}
 
-    void initialize();
+    void initialize() override;
     virtual void display() override;
 
 private:
@@ -34,6 +32,7 @@ private:
 
     bool debug = false;
     int degrees = 0;
+
 
     // OpenGL buffers
     GLuint vao;
@@ -48,26 +47,26 @@ private:
     std::vector<unsigned int> indices;
 
     GLuint locModel;
+    GLuint locView;
+    GLuint locProjection;
 
     void debugShader(void) const;
 
     void loadGeometry(void);
 
     glm::mat4 matModel;
+    glm::mat4 matView;
+    glm::mat4 matProjection;
 
     void translate(float x, float y, float z);
 
     void scale(float x, float y, float z);
 
-    void rotatez(float a);
-
-    void rotatex(float a);
-
-    void rotatey(float a);
+    void rotate(float a, int axis);
 
     void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods) override;
 
-    void loadObjFile(std::string fileName);
+    void loadObjFile();
 
     static float verticesDimension( const std::vector<Vec4>& vertices, int dimension);
 

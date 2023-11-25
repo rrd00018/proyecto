@@ -51,6 +51,13 @@ protected:
     float top = 1.0f;
     float obliqueScale = 0.0f;
     float obliqueAngleRad = pi_f/4.0f;
+    float aspectRatio = 16/9;
+    float nearPlane = 0.1f;
+    float right = 0;
+    float left = 0;
+    float bottom = 0;
+    float translationSpeed = 0.1f;
+
 
 private:
 
