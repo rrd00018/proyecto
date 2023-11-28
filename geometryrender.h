@@ -73,4 +73,6 @@ private:
     virtual void DrawGui() override;
 
     std::vector<float> getOrigin(const std::vector<Vec4>& vertices);
+
+    void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods) override;
 };

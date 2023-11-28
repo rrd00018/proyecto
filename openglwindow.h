@@ -27,6 +27,7 @@ public:
     virtual void errorCallback(int error, const char* desc);
     virtual void resizeCallback(GLFWwindow* window, int width, int height);
     virtual void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods);
+    virtual void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods);
 
     void start();
     virtual void initialize() = 0;
@@ -52,7 +53,7 @@ protected:
     float obliqueScale = 0.0f;
     float obliqueAngleRad = pi_f/4.0f;
     float aspectRatio = 16/9;
-    float nearPlane = 0.1f;
+    float nearPlane = 1.0f;
     float right = 0;
     float left = 0;
     float bottom = 0;

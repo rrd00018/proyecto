@@ -225,6 +225,10 @@ void OpenGLWindow::keyCallBack(GLFWwindow *window, int key, int scancode, int ac
 
 }
 
+void OpenGLWindow::mouseButtonCallBack(GLFWwindow *window, int button, int action, int mods) {
+
+}
+
 // Start the GLFW loop
 void 
 OpenGLWindow::start()

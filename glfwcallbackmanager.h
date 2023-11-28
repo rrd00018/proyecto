@@ -27,6 +27,11 @@ class glfwCallbackManager
         if(app)
             app->keyCallBack(window,key,scancode,action,mods);
     }
+
+    static void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods){
+        if(app)
+            app->mouseButtonCallBack(window,button,action,mods);
+    }
     
 public:
     static void initCallbacks(OpenGLWindow* glfwapp)
@@ -36,5 +41,6 @@ public:
         glfwSetErrorCallback(errorCallback);
         glfwSetFramebufferSizeCallback(app->window() , resizeCallback);
         glfwSetKeyCallback(app->window(),keyCallBack);
+        //glfwSetMouseButtonCallback(app->window(),mouseButtonCallBack);
     }
 };

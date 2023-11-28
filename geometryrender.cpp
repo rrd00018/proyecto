@@ -468,6 +468,7 @@ void GeometryRender::DrawGui() {
             ImGui::SliderFloat("Oblique scale",&obliqueScale, 0.0f, 1.0f, "%.1f", flags);
             ImGui::SliderAngle("Oblique angle",&obliqueAngleRad, 15, 75, "%1.0f", flags);
 
+            aspectRatio = (float) width()/height();
             right = top * aspectRatio;
             left = -right;
             bottom = -top;
@@ -478,9 +479,15 @@ void GeometryRender::DrawGui() {
             if (obliqueScale > 0.0f) {
                 matProjection[2][0] = obliqueScale * glm::tan(obliqueAngleRad);
             }
+            glUniformMatrix4fv(locProjection, 1, GL_FALSE, glm::value_ptr(matProjection));
+
         }
 
     }
 
     ImGui::End();
+    }
+
+void GeometryRender::mouseButtonCallBack(GLFWwindow *window, int button, int action, int mods) {
+
     }
