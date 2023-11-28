@@ -83,7 +83,5 @@ private:
 
     void cursorPositionCallBack(GLFWwindow* window, double xpos, double ypos) override;
 
-    void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods) override;
-
     void computeCameraMouse(float x, float y);
 };

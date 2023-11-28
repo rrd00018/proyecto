@@ -28,7 +28,7 @@ public:
     virtual void resizeCallback(GLFWwindow* window, int width, int height);
     virtual void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods);
     virtual void cursorPositionCallBack(GLFWwindow* window, double xpos, double ypos);
-    virtual void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods);
+
 
     void start();
     virtual void initialize() = 0;

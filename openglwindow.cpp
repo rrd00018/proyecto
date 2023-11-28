@@ -229,10 +229,6 @@ void OpenGLWindow::cursorPositionCallBack(GLFWwindow *window, double xpos, doubl
 
 }
 
-void OpenGLWindow::mouseButtonCallBack(GLFWwindow *window, int button, int action, int mods) {
-
-}
-
 // Start the GLFW loop
 void 
 OpenGLWindow::start()

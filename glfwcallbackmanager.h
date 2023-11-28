@@ -32,10 +32,7 @@ class glfwCallbackManager
         if(app)
             app->cursorPositionCallBack(window,xpos,ypos);
     }
-    static void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods){
-        if(app)
-            app->mouseButtonCallBack(window,button,action,mods);
-    }
+
     
 public:
     static void initCallbacks(OpenGLWindow* glfwapp)
