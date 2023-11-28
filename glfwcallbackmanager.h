@@ -28,6 +28,10 @@ class glfwCallbackManager
             app->keyCallBack(window,key,scancode,action,mods);
     }
 
+    static void cursorPositionCallBack(GLFWwindow* window, double xpos, double ypos){
+        if(app)
+            app->cursorPositionCallBack(window,xpos,ypos);
+    }
     static void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods){
         if(app)
             app->mouseButtonCallBack(window,button,action,mods);
@@ -41,6 +45,6 @@ public:
         glfwSetErrorCallback(errorCallback);
         glfwSetFramebufferSizeCallback(app->window() , resizeCallback);
         glfwSetKeyCallback(app->window(),keyCallBack);
-        //glfwSetMouseButtonCallback(app->window(),mouseButtonCallBack);
+        glfwSetCursorPosCallback(app->window(), cursorPositionCallBack);
     }
 };

@@ -72,17 +72,9 @@ void GeometryRender::loadGeometry(void)
 {
     if(vertices.empty()) {
         // Define vertices in array
-        vertices.push_back(Vec4(-0.5f, -0.75f, 0.0f, 1.0f));
-        vertices.push_back(Vec4(0.0f, 0.75f, 0.0f, 1.0f));
-        vertices.push_back(Vec4(0.5f, -0.75f, 0.0f, 1.0f));
-        vertices.push_back(Vec4(-0.5f, 0.75f, 0.0f, 1.0f));
-
-        indices.push_back(0);
-        indices.push_back(1);
-        indices.push_back(2);
-        indices.push_back(0);
-        indices.push_back(1);
-        indices.push_back(3);
+        objFilePath = "/home/rafa/CLionProjects/proyecto/resources";
+        objFileName = "cube.obj";
+        loadObjFile();
     }
     glUseProgram(program);
     glBindVertexArray(vao);
@@ -148,7 +140,6 @@ void GeometryRender::display()
     }
     glBindVertexArray(0);
     glUseProgram(0);
-
 }
 
 /**
@@ -209,9 +200,9 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
         return;
     }
 
-    glm::vec3 cameraRight = glm::vec3(matView[0][0], matView[1][0], matView[2][0]);
-    glm::vec3 cameraUp = glm::vec3(matView[0][1], matView[1][1], matView[2][1]);
-    glm::vec3 cameraFront = -glm::vec3(matView[0][2], matView[1][2], matView[2][2]);
+     cameraRight = glm::vec3(matView[0][0], matView[1][0], matView[2][0]);
+     cameraUp = glm::vec3(matView[0][1], matView[1][1], matView[2][1]);
+     cameraFront = -glm::vec3(matView[0][2], matView[1][2], matView[2][2]);
 
 
     switch(key){
@@ -303,6 +294,21 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             // Move down along the camera's negative y-axis
             matView = glm::translate(matView, -translationSpeed * cameraUp);
             glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            break;
+
+        case GLFW_KEY_LEFT_SHIFT:
+            if(mouse) {
+                mouse = false;
+                std::cout << "Mouse control OFF" << std::endl;
+            }else {
+                mouse  = true;
+                double x = (double) posX;
+                double y = (double) posY;
+                glfwGetCursorPos(window, &x, &y);
+                posX = x;
+                posY = y;
+                std::cout << "Mouse control ON" << std::endl;
+            }
             break;
     }
 }
@@ -449,9 +455,9 @@ void GeometryRender::DrawGui() {
             ImGui::SliderFloat("Far",&farplane, 1.0f, 1000.0f, "%1.0f", flags);
 
             aspectRatio = (float) width()/height();
-            matProjection = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farplane);
+            matProjection = glm::perspective(glm::radians(fov), aspectRatio, farplane, nearPlane);
 
-            if(debug){
+            //if(debug) {
                 std::cout << "Projection Matrix:" << std::endl;
                 for (int i = 0; i < 4; i++) {
                     for (int j = 0; j < 4; j++) {
@@ -459,8 +465,24 @@ void GeometryRender::DrawGui() {
                     }
                     std::cout << std::endl;
                 }
+                std::cout << "View Matrix:" << std::endl;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        std::cout << matView[i][j] << " ";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << "Model Matrix:" << std::endl;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        std::cout << matModel[i][j] << " ";
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << aspectRatio << endl;
                 std::cout << "----------------------------------" << std::endl;
-            }
+
+            //}
         }
         if (proj_current_idx == 1) {
             ImGui::SliderFloat("Top",&top, 1.0f, 100.0f, "%.1f", flags);
@@ -477,17 +499,47 @@ void GeometryRender::DrawGui() {
 
             // Apply oblique projection if needed
             if (obliqueScale > 0.0f) {
-                matProjection[2][0] = obliqueScale * glm::tan(obliqueAngleRad);
+                glm::mat4 H = glm::mat4(1.0f);
+                H[2][0] = obliqueScale * cos(obliqueAngleRad);
+                H[2][1] = obliqueScale * sin(obliqueAngleRad);
+                matProjection = matProjection * H;
             }
             glUniformMatrix4fv(locProjection, 1, GL_FALSE, glm::value_ptr(matProjection));
 
         }
-
     }
 
     ImGui::End();
     }
 
-void GeometryRender::mouseButtonCallBack(GLFWwindow *window, int button, int action, int mods) {
+void GeometryRender::cursorPositionCallBack(GLFWwindow *window, double xpos, double ypos) {
+        ImGui_ImplGlfw_CursorPosCallback(window,xpos,ypos);
+        if(mouse) {
+            double x = (double) posX;
+            double y = (double) posY;
+            glfwGetCursorPos(window, &x, &y);
 
+            computeCameraMouse(x,y);
+            posX = x;
+            posY = y;
+        }
+    }
+
+void GeometryRender::computeCameraMouse(float x, float y) {
+        float difX = posX - x;
+        float difY = posY - y;
+
+        cameraRight = glm::vec3(matView[0][0], matView[1][0], matView[2][0]);
+        cameraUp = glm::vec3(matView[0][1], matView[1][1], matView[2][1]);
+        cameraFront = -glm::vec3(matView[0][2], matView[1][2], matView[2][2]);
+        if(difX > 0){
+            matView = glm::translate(matView, translationSpeed/20 * cameraRight);
+        }else if(difX < 0){
+            matView = glm::translate(matView, -translationSpeed/20 * cameraRight);
+        }else if(difY > 0){
+            matView = glm::translate(matView, -translationSpeed/2 * cameraUp);
+        }else if(difY < 0){
+            matView = glm::translate(matView, translationSpeed/2 * cameraUp);
+        }
+        glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
     }

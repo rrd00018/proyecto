@@ -225,6 +225,10 @@ void OpenGLWindow::keyCallBack(GLFWwindow *window, int key, int scancode, int ac
 
 }
 
+void OpenGLWindow::cursorPositionCallBack(GLFWwindow *window, double xpos, double ypos) {
+
+}
+
 void OpenGLWindow::mouseButtonCallBack(GLFWwindow *window, int button, int action, int mods) {
 
 }

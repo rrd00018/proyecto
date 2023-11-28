@@ -31,7 +31,10 @@ private:
     GLuint program;
 
     bool debug = false;
+    bool mouse = false;
     int degrees = 0;
+    float posX;
+    float posY;
 
 
     // OpenGL buffers
@@ -58,6 +61,10 @@ private:
     glm::mat4 matView;
     glm::mat4 matProjection;
 
+    glm::vec3 cameraRight;
+    glm::vec3 cameraUp;
+    glm::vec3 cameraFront;
+
     void translate(float x, float y, float z);
 
     void scale(float x, float y, float z);
@@ -74,5 +81,9 @@ private:
 
     std::vector<float> getOrigin(const std::vector<Vec4>& vertices);
 
+    void cursorPositionCallBack(GLFWwindow* window, double xpos, double ypos) override;
+
     void mouseButtonCallBack(GLFWwindow* window, int button, int action, int mods) override;
+
+    void computeCameraMouse(float x, float y);
 };
