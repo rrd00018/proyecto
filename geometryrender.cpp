@@ -457,7 +457,7 @@ void GeometryRender::DrawGui() {
             aspectRatio = (float) width()/height();
             matProjection = glm::perspective(glm::radians(fov), aspectRatio, farplane, nearPlane);
 
-            //if(debug) {
+            if(debug) {
                 std::cout << "Projection Matrix:" << std::endl;
                 for (int i = 0; i < 4; i++) {
                     for (int j = 0; j < 4; j++) {
@@ -482,7 +482,7 @@ void GeometryRender::DrawGui() {
                 std::cout << aspectRatio << endl;
                 std::cout << "----------------------------------" << std::endl;
 
-            //}
+            }
         }
         if (proj_current_idx == 1) {
             ImGui::SliderFloat("Top",&top, 1.0f, 100.0f, "%.1f", flags);
