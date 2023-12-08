@@ -54,7 +54,7 @@ protected:
     float obliqueScale = 0.0f;
     float obliqueAngleRad = pi_f/4.0f;
     float aspectRatio = 16/9;
-    float nearPlane = 1.0f;
+    float nearPlane = 0.1f;
     float right = 0;
     float left = 0;
     float bottom = 0;

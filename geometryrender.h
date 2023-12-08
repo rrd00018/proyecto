@@ -65,6 +65,10 @@ private:
     glm::vec3 cameraUp;
     glm::vec3 cameraFront;
 
+    glm::vec3 cameraPosition;
+    glm::vec3 lookAt;
+    glm::vec3 upVector;
+
     void translate(float x, float y, float z);
 
     void scale(float x, float y, float z);

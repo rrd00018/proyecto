@@ -32,9 +32,9 @@ void GeometryRender::initialize()
     //Initializes matrixes
     matModel = glm::mat4(1.0f);
     matProjection = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farplane);
-    glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
-    glm::vec3 lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
-    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
+    lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
+    upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
 
     //Load the matrixes into the shader
@@ -262,37 +262,48 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
 
         case GLFW_KEY_W:
             // Move forward along the camera's negative z-axis
-            matView = glm::translate(matView, -translationSpeed * cameraFront);
-            glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
+            cameraPosition = glm::inverse(matView) * glm::vec4(0,0,-0.1f,1);
+            lookAt = glm::inverse(matView) * glm::vec4(0,0,-1-0.1f,1);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
             break;
 
         case GLFW_KEY_S:
             // Move backward along the camera's positive z-axis
-            matView = glm::translate(matView, translationSpeed * cameraFront);
+            cameraPosition = glm::inverse(matView) * glm::vec4(0,0,+0.1f,1);
+            lookAt = glm::inverse(matView) * glm::vec4(0,0,-1+0.1f,1);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
             glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
             break;
 
         case GLFW_KEY_A:
             // Move left along the camera's negative x-axis
-            matView = glm::translate(matView, -translationSpeed * cameraRight);
+            cameraPosition = glm::inverse(matView) * glm::vec4(-0.1f,0, 0,1);
+            lookAt = glm::inverse(matView) * glm::vec4(-0.1f,0,-1,1);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
             glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
             break;
 
         case GLFW_KEY_D:
             // Move right along the camera's positive x-axis
-            matView = glm::translate(matView, translationSpeed * cameraRight);
+            cameraPosition = glm::inverse(matView) * glm::vec4(0.1f, 0, 0,1);
+            lookAt = glm::inverse(matView) * glm::vec4(+0.1f,0,-1,1);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
             glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
             break;
 
         case GLFW_KEY_E:
             // Move up along the camera's positive y-axis
-            matView = glm::translate(matView, translationSpeed * cameraUp);
+            cameraPosition = glm::inverse(matView) * glm::vec4(0, 0.1f, 0,1);
+            lookAt = glm::inverse(matView) * glm::vec4(0,0.1f,-1,1);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
             glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
             break;
 
         case GLFW_KEY_Q:
             // Move down along the camera's negative y-axis
-            matView = glm::translate(matView, -translationSpeed * cameraUp);
+            cameraPosition = glm::inverse(matView) * glm::vec4(0, -0.1f, 0,1);
+            lookAt = glm::inverse(matView) * glm::vec4(0,-0.1f,-1,1);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
             glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
             break;
 
@@ -376,6 +387,10 @@ void GeometryRender::loadObjFile() {
         vertices[i].values[2] *= scaleFactor;
     }
     matModel = glm::mat4 (1.0f);
+    cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
+    lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
+    upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    matView = glm::lookAt(cameraPosition, lookAt, upVector);
     loadGeometry();
 }
 
@@ -526,20 +541,26 @@ void GeometryRender::cursorPositionCallBack(GLFWwindow *window, double xpos, dou
     }
 
 void GeometryRender::computeCameraMouse(float x, float y) {
-        float difX = posX - x;
-        float difY = posY - y;
-
-        cameraRight = glm::vec3(matView[0][0], matView[1][0], matView[2][0]);
-        cameraUp = glm::vec3(matView[0][1], matView[1][1], matView[2][1]);
-        cameraFront = -glm::vec3(matView[0][2], matView[1][2], matView[2][2]);
-        if(difX > 0){
-            matView = glm::translate(matView, translationSpeed/20 * cameraRight);
-        }else if(difX < 0){
-            matView = glm::translate(matView, -translationSpeed/20 * cameraRight);
-        }else if(difY > 0){
-            matView = glm::translate(matView, -translationSpeed/2 * cameraUp);
-        }else if(difY < 0){
-            matView = glm::translate(matView, translationSpeed/2 * cameraUp);
+    double deltaX = posX - x;
+    double deltaY = posY - y;
+    if(deltaX > 0) { //caso derecha
+        lookAt = glm::vec3(lookAt.x-0.01f, lookAt.y, lookAt.z);
+        matView=glm::lookAt(cameraPosition,lookAt,upVector);
+    } else {
+        if(deltaX < 0) { //caso izq
+            lookAt = glm::vec3(lookAt.x+0.01f, lookAt.y, lookAt.z);
+            matView=glm::lookAt(cameraPosition,lookAt,upVector);
+        } else {
+            if(deltaY > 0) { //caso abajo
+                lookAt = glm::vec3(lookAt.x, lookAt.y+0.01f, lookAt.z);
+                matView=glm::lookAt(cameraPosition,lookAt,upVector);
+            } else {
+                if (deltaY < 0) { //caso arriba
+                    lookAt = glm::vec3(lookAt.x, lookAt.y-0.01f, lookAt.z);
+                    matView=glm::lookAt(cameraPosition,lookAt,upVector);
+                }
+            }
         }
+    }
         glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
     }
