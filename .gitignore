@@ -1,2 +1,10 @@
 # Project exclude paths
 /cmake-build-debug/
+/3DStudio
+/geometryrender.d
+/geometryrender.o
+/main.d
+/main.o
+/openglwindow.d
+/openglwindow.o
+/imgui.ini
