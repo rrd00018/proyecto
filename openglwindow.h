@@ -8,6 +8,11 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include "glm/ext.hpp"
+#include "glm/gtx/string_cast.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "3dstudio.h"
 #include "imgui.h"
@@ -47,6 +52,9 @@ protected:
 
     std::string objFileName;
     std::string objFilePath;
+    std::string textureFileName;
+    std::string textureFilePath;
+    bool textureShow = false;
 
     float fov = 60.0f;
     float farplane = 500.0f;
@@ -59,6 +67,16 @@ protected:
     float left = 0;
     float bottom = 0;
     float translationSpeed = 0.1f;
+
+    glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 ambientColor = glm::vec3(0.2f, 0.2f, 0.2f);
+
+    glm::vec3 materialAmbient = glm::vec3(0.5f, 0.5f, 0.5f);
+    glm::vec3 materialDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+    glm::vec3 materialSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+    float materialShininess = 1.0f;
 
 
 private:

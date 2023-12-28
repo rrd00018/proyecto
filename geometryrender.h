@@ -35,7 +35,8 @@ private:
     int degrees = 0;
     float posX;
     float posY;
-
+    float cameraSpeed = 1.0f;
+    float yaw = 0,pitch = 0.0f;
 
     // OpenGL buffers
     GLuint vao;
@@ -44,14 +45,31 @@ private:
 
     // OpenGL attribute locations
     GLuint locVertices;
+    GLuint locNormals;
 
     // Geometry data
     std::vector<Vec4> vertices;
     std::vector<unsigned int> indices;
+    std::vector<glm::vec3> normals;
 
     GLuint locModel;
     GLuint locView;
     GLuint locProjection;
+
+    //Shader used
+    GLuint locCameraPosition;
+    GLuint locLightPos;
+    GLuint locLightColor;
+    GLuint locAmbientColor;
+    GLuint locMaterialAmbient;
+    GLuint locMaterialDiffuse;
+    GLuint locMaterialSpecular;
+    GLuint locMaterialShininess;
+
+    //SHader used to control
+    GLuint locIlluminationModel;
+    int illuminationModel;
+
 
     void debugShader(void) const;
 
