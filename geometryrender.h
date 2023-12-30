@@ -12,6 +12,7 @@
 #include "glm/gtx/string_cast.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/vector_angle.hpp>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -32,11 +33,12 @@ private:
 
     bool debug = false;
     bool mouse = false;
+    bool firsClick = false;
     int degrees = 0;
     float posX;
     float posY;
     float cameraSpeed = 1.0f;
-    float yaw = 0,pitch = 0.0f;
+    float yaw = -90,pitch = 0.0f;
 
     // OpenGL buffers
     GLuint vao;

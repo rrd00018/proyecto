@@ -1,7 +1,7 @@
 /*
  *  Workshop 1
  *  Computer Graphics course
- *  Dept Computing Science, Umea University
+ *  Dept Computing Science, Umeå University
  *  Stefan Johansson, stefanj@cs.umu.se
  */
 
@@ -45,7 +45,7 @@ void GeometryRender::initialize()
     //Initializes matrixes
     matModel = glm::mat4(1.0f);
     matProjection = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farplane);
-    cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
+    cameraPosition = glm::vec3(0.0f, 0.0f, 1.0f);
     lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
     upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
@@ -92,8 +92,7 @@ void GeometryRender::loadGeometry(void)
     }
     glUseProgram(program);
     glBindVertexArray(vao);
-    std::cout << vertices.size() << std::endl;
-    std::cout << indices.size() << std::endl;
+
     // Set the pointers of locVertices to the right places
     glVertexAttribPointer(locVertices, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
     glEnableVertexAttribArray(locVertices);
@@ -157,19 +156,8 @@ void GeometryRender::display()
     // Call OpenGL to draw the triangle
     glDrawElements(GL_TRIANGLES, static_cast<int>(indices.size()), GL_UNSIGNED_INT, BUFFER_OFFSET(0));
 
-
     // Not to be called in release...
     debugShader();
-    if(debug) {
-        for(int i = 0; i < 4; i++){
-            for(int j = 0; j < 4; j++){
-                std::cout << matProjection[i][j] << " ";
-            }
-            std::cout << endl;
-        }
-        std::cout << "----------------------------------" << std::endl;
-    }
-
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -228,9 +216,7 @@ void GeometryRender::rotate(float a,int axis) {
  * O-> charge OBJ file from resources
  */
 void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    if(action != GLFW_PRESS){ //Evita que una liberacion de tecla o cualquier otra accion modifique el programa
-        return;
-    }
+
 
      cameraRight = glm::vec3(matView[0][0], matView[1][0], matView[2][0]);
      cameraUp = glm::vec3(matView[0][1], matView[1][1], matView[2][1]);
@@ -289,6 +275,7 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             break;
 
         case GLFW_KEY_O:
+            std::cin >> objFileName;
             loadObjFile();
             break;
 
@@ -340,13 +327,14 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
             break;
 
         case GLFW_KEY_LEFT_SHIFT:
+            if(action != GLFW_PRESS) return;
             if(mouse) {
                 mouse = false;
                 std::cout << "Mouse control OFF" << std::endl;
             }else {
-                mouse  = true;
-                double x = (double) posX;
-                double y = (double) posY;
+                mouse = true;
+                double x;
+                double y;
                 glfwGetCursorPos(window, &x, &y);
                 posX = x;
                 posY = y;
@@ -402,11 +390,13 @@ void GeometryRender::loadObjFile() {
                 v.push_back(token);
                 //std::cout << token << std::endl;
             }
-
+            /*
             for(int i = 0; i < v.size(); i++){
                 std::cout << v[i] << " || ";
             }
+
             std::cout << "->"<< endl;
+            */
             if(v.size() == 3) {
                 for (int i = 0; i < v.size(); i++) {
                     std::stringstream s1(v[i]);
@@ -498,11 +488,13 @@ void GeometryRender::loadObjFile() {
 
     }
 
+    //Reset matrixes
     matModel = glm::mat4 (1.0f);
     cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
     lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
     upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
+
     loadGeometry();
 }
 
@@ -688,30 +680,44 @@ void GeometryRender::DrawGui() {
 void GeometryRender::cursorPositionCallBack(GLFWwindow *window, double xpos, double ypos) {
     ImGui_ImplGlfw_CursorPosCallback(window,xpos,ypos);
     if(mouse) {
-        double x = (double) posX;
-        double y = (double) posY;
-        glfwGetCursorPos(window, &x, &y);
-
-        computeCameraMouse(x,y);
-        posX = x;
-        posY = y;
+        computeCameraMouse(xpos,ypos);
+        posX = xpos;
+        posY = ypos;
     }
 }
 
 void GeometryRender::computeCameraMouse(float x, float y) {
+
     double deltaX = x - posX;
     double deltaY = posY - y;
-
     yaw += deltaX * cameraSpeed;
     pitch += deltaY * cameraSpeed;
+   /* float rotX = cameraSpeed * (float)(y - (height() / 2)) / height();
+    float rotY = cameraSpeed * (float)(x - (width() / 2)) / width();
+    glm::vec3 newOrientation = glm::rotate(lookAt, glm::radians(-rotX), glm::normalize(glm::cross(lookAt, upVector)));*/
 
     glm::vec3 direction;
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     lookAt = cameraPosition + glm::normalize(direction);
-    std::cout << lookAt.x << " " << lookAt.y << " " << lookAt.z << std::endl;
+
+    //Debug text
+    std::cout << "-----------------------------" << std::endl;
+    std::cout << "Yaw: " << yaw << " Pitch: " << pitch << std::endl;
+    std::cout << "X: " << cos(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
+    std::cout << "Z: " << sin(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
+    std::cout << "Camera position: " << cameraPosition.x << " " << cameraPosition.y << " " << cameraPosition.z << std::endl;
+    std::cout << "Direction: " << direction.x << " " << direction.y << " " << direction.z << std::endl;
+    std::cout << "Up vector: " << upVector.x << " " << upVector.y << " " << upVector.z << std::endl;
+    std::cout << "Look at: " << lookAt.x << " " << lookAt.y << " " << lookAt.z << std::endl;
+    std::cout << "Matrices: " << std::endl;
     matView = glm::lookAt(cameraPosition,lookAt,upVector);
+    for(int i = 0; i < 4; i++){
+        for(int j = 0; j < 4; j++){
+            std::cout << matView[j][i] << " ";
+        }
+        std::cout << std::endl;
+    }
+
 }
-
-
