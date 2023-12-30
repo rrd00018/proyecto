@@ -692,9 +692,6 @@ void GeometryRender::computeCameraMouse(float x, float y) {
     double deltaY = posY - y;
     yaw += deltaX * cameraSpeed;
     pitch += deltaY * cameraSpeed;
-   /* float rotX = cameraSpeed * (float)(y - (height() / 2)) / height();
-    float rotY = cameraSpeed * (float)(x - (width() / 2)) / width();
-    glm::vec3 newOrientation = glm::rotate(lookAt, glm::radians(-rotX), glm::normalize(glm::cross(lookAt, upVector)));*/
 
     glm::vec3 direction;
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
@@ -703,21 +700,24 @@ void GeometryRender::computeCameraMouse(float x, float y) {
     lookAt = cameraPosition + glm::normalize(direction);
 
     //Debug text
-    std::cout << "-----------------------------" << std::endl;
-    std::cout << "Yaw: " << yaw << " Pitch: " << pitch << std::endl;
-    std::cout << "X: " << cos(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
-    std::cout << "Z: " << sin(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
-    std::cout << "Camera position: " << cameraPosition.x << " " << cameraPosition.y << " " << cameraPosition.z << std::endl;
-    std::cout << "Direction: " << direction.x << " " << direction.y << " " << direction.z << std::endl;
-    std::cout << "Up vector: " << upVector.x << " " << upVector.y << " " << upVector.z << std::endl;
-    std::cout << "Look at: " << lookAt.x << " " << lookAt.y << " " << lookAt.z << std::endl;
-    std::cout << "Matrices: " << std::endl;
-    matView = glm::lookAt(cameraPosition,lookAt,upVector);
-    for(int i = 0; i < 4; i++){
-        for(int j = 0; j < 4; j++){
-            std::cout << matView[j][i] << " ";
+    if(debug) {
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << "Yaw: " << yaw << " Pitch: " << pitch << std::endl;
+        std::cout << "X: " << cos(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
+        std::cout << "Z: " << sin(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
+        std::cout << "Camera position: " << cameraPosition.x << " " << cameraPosition.y << " " << cameraPosition.z
+                  << std::endl;
+        std::cout << "Direction: " << direction.x << " " << direction.y << " " << direction.z << std::endl;
+        std::cout << "Up vector: " << upVector.x << " " << upVector.y << " " << upVector.z << std::endl;
+        std::cout << "Look at: " << lookAt.x << " " << lookAt.y << " " << lookAt.z << std::endl;
+        std::cout << "Matrices: " << std::endl;
+        matView = glm::lookAt(cameraPosition, lookAt, upVector);
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                std::cout << matView[j][i] << " ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
     }
 
 }
