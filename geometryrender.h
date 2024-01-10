@@ -1,7 +1,7 @@
 /*
  *  Workshop 1
  *  Computer Graphics course
- *  Dept Computing Science, Umea University
+ *  Dept Computing Science, Umeå University
  *  Stefan Johansson, stefanj@cs.umu.se
  */
 #pragma once
@@ -17,6 +17,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include "stb_image.h"
 
 class GeometryRender : public OpenGLWindow
 {
@@ -31,7 +32,7 @@ public:
 private:
     GLuint program;
 
-    bool debug = false;
+    bool debug = true;
     bool mouse = false;
     bool firsClick = false;
     int degrees = 0;
@@ -50,15 +51,16 @@ private:
     GLuint locNormals;
 
     // Geometry data
-    std::vector<Vec4> vertices;
+    std::vector<glm::vec4> vertices;
     std::vector<unsigned int> indices;
-    std::vector<glm::vec3> normals;
+    std::vector<glm::vec4> normals;
+    std::vector<glm::vec2> textureCoordinates;
 
     GLuint locModel;
     GLuint locView;
     GLuint locProjection;
 
-    //Shader used
+    //Lightning used
     GLuint locCameraPosition;
     GLuint locLightPos;
     GLuint locLightColor;
@@ -68,9 +70,14 @@ private:
     GLuint locMaterialSpecular;
     GLuint locMaterialShininess;
 
-    //SHader used to control
+    //Shader used to control
     GLuint locIlluminationModel;
     int illuminationModel;
+
+    //Texture
+    GLuint locTexture = 0;
+    GLuint locTextureShow;
+    GLuint locTextureCoordinates;
 
 
     void debugShader(void) const;
@@ -99,13 +106,49 @@ private:
 
     void loadObjFile();
 
-    static float verticesDimension( const std::vector<Vec4>& vertices, int dimension);
+    static float verticesDimension( const std::vector<glm::vec4>& vertices, int dimension);
 
     virtual void DrawGui() override;
 
-    std::vector<float> getOrigin(const std::vector<Vec4>& vertices);
+    glm::vec4 getOrigin(const std::vector<glm::vec4>& vertices);
 
     void cursorPositionCallBack(GLFWwindow* window, double xpos, double ypos) override;
 
     void computeCameraMouse(float x, float y);
+
+    GLuint loadTexture(const std::string& filePath);
+
+    void activateTexture();
+
+    void deactivateTexture();
+
+
+    std::string objFileName;
+    std::string objFilePath;
+    std::string textureFileName;
+    std::string textureFilePath;
+    bool textureShow = false;
+
+    float fov = 60.0f;
+    float farplane = 500.0f;
+    float top = 1.0f;
+    float obliqueScale = 0.0f;
+    float obliqueAngleRad = pi_f/4.0f;
+    float aspectRatio = (float) width()/height();
+    float nearPlane = 0.1f;
+    float right = 0;
+    float left = 0;
+    float bottom = 0;
+    float translationSpeed = 0.1f;
+
+    glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 2.0f);
+    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 ambientColor = glm::vec3(0.2f, 0.2f, 0.2f);
+
+    glm::vec3 materialAmbient = glm::vec3(0.5f, 0.5f, 0.5f);
+    glm::vec3 materialDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+    glm::vec3 materialSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+    float materialShininess = 1.0f;
+
 };

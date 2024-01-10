@@ -22,7 +22,8 @@ LIBDIR = $(SRC)/lib
 CPPS =  $(SRC)/main.cpp \
 	$(wildcard $(SRC)/*.cpp) \
 	$(wildcard $(LIBDIR)/ImGui/*.cpp) \
-	$(wildcard $(LIBDIR)/ImGuiFileDialog/*.cpp)
+	$(wildcard $(LIBDIR)/ImGuiFileDialog/*.cpp) \
+	$(wildcard $(LIBDIR)/TextureLibs/*.cpp)
 
 # All .o files are put in the build directory
 OBJS = $(CPPS:%.cpp=$(BUILD_DIR)/%.o)
@@ -38,7 +39,7 @@ DBFLAGS = -O0 -g3 -ggdb3 -fno-inline
 WFLAGS  = -Wall -std=c++11 -Wformat -Wno-unknown-pragmas
 
 # Uncomment if you have local libraries or headers in subfolders lib and include
-IFLAGS = -I$(LIBDIR)/ImGui -I$(LIBDIR)/ImGuiFileDialog
+IFLAGS = -I$(LIBDIR)/ImGui -I$(LIBDIR)/ImGuiFileDialog -I$(LIBDIR)/TextureLibs
 LFLAGS = #-Llib
 
 IMGUIFLAGS = -DIMGUI_IMPL_OPENGL_LOADER_GLEW
@@ -50,7 +51,7 @@ DEFS      = -DWINDOWS_BUILD
 GLFLAGS   = -DGLEW_STATIC
 OSLDFLAGS = -static -lglew32 -lglfw3 -lopengl32 -lgdi32 -luser32 -lkernel32
 else
-DEFS     = 
+DEFS     =
 GLFLAGS  = `pkg-config --cflags glfw3`
 LGLFLAGS = `pkg-config --static --libs glew glfw3 gl`
 ELDFLAGS = -export-dynamic -lXext -lX11

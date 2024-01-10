@@ -17,7 +17,7 @@ void GeometryRender::initialize()
 {
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
-
+    glEnable(GL_CULL_FACE);
     // Create and initialize a program object with shaders
     program = initProgram("vshader.glsl", "fshader.glsl");
 
@@ -41,6 +41,12 @@ void GeometryRender::initialize()
     locIlluminationModel = glGetUniformLocation(program,"illuminationModel");
     illuminationModel = 0;
     glUniform1i(locIlluminationModel,illuminationModel);
+
+    //Initialize the texture
+    textureShow = false;
+    textureFileName = "";
+    textureFilePath = "";
+
 
     //Initializes matrixes
     matModel = glm::mat4(1.0f);
@@ -72,6 +78,8 @@ void GeometryRender::initialize()
     // Get locations of the attributes in the shader
     locVertices = glGetAttribLocation( program, "vPosition");
     locNormals = glGetAttribLocation(program,"vNormal");
+    locTextureCoordinates = glGetAttribLocation(program,"textureCoordinates");
+    locTextureShow = glGetAttribLocation(program,"textureShow");
 
     glBindVertexArray(0);
     glUseProgram(0);
@@ -87,9 +95,20 @@ void GeometryRender::loadGeometry(void)
     if(vertices.empty()) {
         // Define vertices in array
         objFilePath = "/home/rafa/CLionProjects/proyecto/resources";
-        objFileName = "suzanne.obj";
+        objFileName = "cube.obj";
         loadObjFile();
     }
+
+    if(locTexture == 0) {
+        if (textureFilePath == "") textureFilePath = "/home/rafa/CLionProjects/proyecto/resources";
+        if (textureFileName == "")
+            textureFileName = "colorful-tile-mosaic-square-background-modern-abstract-gradient-card-business-geometric-poster-vector.jpg";
+        locTexture = loadTexture(textureFilePath + "/" + textureFileName);
+
+    }
+
+
+
     glUseProgram(program);
     glBindVertexArray(vao);
 
@@ -98,14 +117,16 @@ void GeometryRender::loadGeometry(void)
     glEnableVertexAttribArray(locVertices);
 
     // Load object data to the array buffer and index array
-    size_t vSize = vertices.size()*sizeof(Vec4);
+    size_t vSize = vertices.size()*sizeof(glm::vec4);
     size_t iSize = indices.size()*sizeof(unsigned int);
-    size_t nSize = normals.size()*sizeof(glm::vec3);
+    size_t nSize = normals.size()*sizeof(glm::vec4);
+    size_t tSize = textureCoordinates.size()*sizeof(glm::vec2);
 
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, iSize, indices.data(), GL_STATIC_DRAW );
-    glBufferData(GL_ARRAY_BUFFER, vSize + nSize, NULL,GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vSize + nSize + tSize, NULL,GL_STATIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, 0, vSize,vertices.data());
     glBufferSubData(GL_ARRAY_BUFFER, vSize, nSize,normals.data());
+    glBufferSubData(GL_ARRAY_BUFFER, nSize+vSize, tSize,textureCoordinates.data());
 
     //Set the pointers of locNormal to the right places
     glVertexAttribPointer(locNormals, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vSize));
@@ -138,10 +159,12 @@ void GeometryRender::display()
     glUseProgram(program);
     glBindVertexArray(vao);
 
+    //Matrixes to shader
     glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
     glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
     glUniformMatrix4fv(locProjection, 1, GL_FALSE, glm::value_ptr(matProjection));
-    glUniform3fv(locCameraPosition,1,glm::value_ptr(cameraPosition));
+
+    //Lightning things to shader
     glUniform1f(locMaterialShininess,materialShininess);
     glUniform3fv(locCameraPosition, 1, glm::value_ptr(cameraPosition));
     glUniform3fv(locLightPos, 1, glm::value_ptr(lightPos));
@@ -150,14 +173,29 @@ void GeometryRender::display()
     glUniform3fv(locMaterialAmbient, 1, glm::value_ptr(materialAmbient));
     glUniform3fv(locMaterialDiffuse, 1, glm::value_ptr(materialDiffuse));
     glUniform3fv(locMaterialSpecular, 1, glm::value_ptr(materialSpecular));
+    glUniform1i(locIlluminationModel,illuminationModel);
+
+    //Texture things to shader
+    glUniform1i(glGetUniformLocation(program, "myTexture"), 0);
+    glUniform2fv(locTextureCoordinates,1,glm::value_ptr(textureCoordinates[0]));
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    if(illuminationModel == 2)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+
+    if(textureShow)
+        activateTexture();
+
     // Call OpenGL to draw the triangle
     glDrawElements(GL_TRIANGLES, static_cast<int>(indices.size()), GL_UNSIGNED_INT, BUFFER_OFFSET(0));
 
     // Not to be called in release...
     debugShader();
+
+    deactivateTexture();
+
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -358,8 +396,11 @@ void GeometryRender::loadObjFile() {
 
     vertices.clear();
     indices.clear();
+    textureCoordinates.clear();
 
-    std::vector<glm::vec3> normalesArchivo;
+    std::vector<glm::vec4> normalesArchivo;
+    std::vector<int> normalesAsignadas;
+
     std::string line;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -371,14 +412,13 @@ void GeometryRender::loadObjFile() {
         // Procesa la entrada basada en su tipo
         if (type == "v") {
             // Lee las coordenadas de un vértice y crea un objeto Vec4 para representarlo
-            Vec4 vertex(0, 0, 0, 1);
-            iss >> vertex.values[0] >> vertex.values[1] >> vertex.values[2];
+            glm::vec4 vertex(0, 0, 0, 1);
+            iss >> vertex.x >> vertex.y >> vertex.z;
             vertices.push_back(vertex);
         } else if (type == "f") {
-            if(normals.size() < vertices.size()){
-                for(int i = normals.size(); i  < vertices.size(); i++){
-                    normals.push_back(glm::vec3(1.0f));
-                }
+            while(normals.size() < vertices.size()){
+                normals.push_back(glm::vec4(glm::vec3(1.0f),0.0f));
+                normalesAsignadas.push_back(0);
             }
             // Lee los índices de una cara y los agrega al vector de índices
             std::string values = line.substr(2,line.size()-2); //Coge los datos eliminando el prefijo
@@ -388,104 +428,104 @@ void GeometryRender::loadObjFile() {
             std::string token;
             while(getline(ss,token,' ')){
                 v.push_back(token);
-                //std::cout << token << std::endl;
-            }
-            /*
-            for(int i = 0; i < v.size(); i++){
-                std::cout << v[i] << " || ";
             }
 
-            std::cout << "->"<< endl;
-            */
             if(v.size() == 3) {
-                for (int i = 0; i < v.size(); i++) {
+                for (size_t i = 0; i < 3; i++) {
                     std::stringstream s1(v[i]);
-                    getline(s1, v[i], '/'); //Cuando llega a la primera barra para para coger el indice
-                    int index = stoi(v[i]);
+                    std::string indice;
+                    getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
+                    int index = stoi(indice);
                     indices.push_back(index - 1);
                     if(!normalesArchivo.empty()){
-                        size_t pos = v[i].find_last_of('/');
-                        std::string normalVertice = v[i].substr(pos+1);
-                        normals[index-1] = normalesArchivo[stoi(normalVertice)];
+                        size_t pos = v[i].find_last_of('/')+1;
+                        int normalVertice = stoi(v[i].substr(pos)) - 1;
+                        normals[index-1] += normalesArchivo[normalVertice];
+                        normalesAsignadas[index-1] += 1;
                     }
-
                 }
             }else if(v.size() == 4){
                 for (int i = 0; i < 3; i++) {
                     std::stringstream s1(v[i]);
-                    getline(s1, v[i], '/'); //Cuando llega a la primera barra para para coger el indice
-                    int index = stoi(v[i]);
+                    std::string indice;
+                    getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
+                    int index = stoi(indice);
                     indices.push_back(index - 1);
                     if(!normalesArchivo.empty()){
                         size_t pos = v[i].find_last_of('/');
                         std::string normalVertice = v[i].substr(pos+1);
-                        normals[index-1] = normalesArchivo[stoi(normalVertice)];
+                        normals[index-1] += normalesArchivo[stoi(normalVertice)-1];
                     }
                 }
                 for (int i = 2; i < 5; i++) {
                     std::stringstream s1(v[i%4]);
-                    getline(s1, v[i%4], '/'); //Cuando llega a la primera barra para para coger el indice
-                    int index = stoi(v[i%4]);
+                    std::string indice;
+                    getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
+                    int index = stoi(indice);
                     indices.push_back(index - 1);
                     if(!normalesArchivo.empty()){
                         size_t pos = v[i%4].find_last_of('/');
                         std::string normalVertice = v[i%4].substr(pos+1);
-                        normals[index-1] = normalesArchivo[stoi(normalVertice)];
+                        std::cout << normalVertice << std::endl;
+                        normals[index-1] += normalesArchivo[stoi(normalVertice)-1];
                     }
                 }
             }
 
         } else if (type == "vn"){
-            glm::vec3 vertex(0, 0, 0);
-            iss >> vertex.x >> vertex.y >> vertex.z;
-            normalesArchivo.push_back(vertex);
+            glm::vec4 normal(0, 0, 0,0);
+            iss >> normal.x >> normal.y >> normal.z;
+            normalesArchivo.push_back(normal);
+            normalesAsignadas.push_back(0);
         } else if (type == "vt"){
 
         }
     }
     file.close();
-
     //Calculate scalate factor as 1/maxDimension
     float maxDimension = std::max(std::max(verticesDimension(vertices, 0), verticesDimension(vertices, 1)), verticesDimension(vertices, 2));
     float scaleFactor = 1.0f / maxDimension;
 
     //Apply the scalate factor to each coordinate of vertexs
-    for (int i = 0; i < vertices.size(); i++) {
-        vertices[i].values[0] *= scaleFactor;
-        vertices[i].values[1] *= scaleFactor;
-        vertices[i].values[2] *= scaleFactor;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        vertices[i].x *= scaleFactor;
+        vertices[i].y *= scaleFactor;
+        vertices[i].z *= scaleFactor;
     }
 
-    //Calcula las normales
+    //Normal Calculation
     if(normalesArchivo.empty()){
-        std::vector<glm::vec3> normals(vertices.size(), glm::vec3(0.0f));
-
-        // Iterar a través de los índices en grupos de 3 (triángulos)
+        normals = std::vector<glm::vec4>(vertices.size(), glm::vec4(0.0f));
+        std::cout << normals.size() << std::endl;
+        //Iterate through the triangles
         for (size_t i = 0; i < indices.size(); i += 3) {
-            // Obtener los índices de los vértices del triángulo actual
-            unsigned int i1 = indices[i];
-            unsigned int i2 = indices[i + 1];
-            unsigned int i3 = indices[i + 2];
+            glm::vec3 v0 = glm::vec3(vertices[indices[i]].x, vertices[indices[i]].y, vertices[indices[i]].z);
+            glm::vec3 v1 = glm::vec3(vertices[indices[i+1]].x, vertices[indices[i+1]].y, vertices[indices[i+1]].z);
+            glm::vec3 v2 = glm::vec3(vertices[indices[i+2]].x, vertices[indices[i+2]].y, vertices[indices[i+2]].z);
 
-            // Obtener los vértices del triángulo actual
-            glm::vec3 v1 = {vertices[i1].values[0],vertices[i1].values[1],vertices[i1].values[2]};
-            glm::vec3 v2 = {vertices[i2].values[0],vertices[i2].values[1],vertices[i2].values[2]};
-            glm::vec3 v3 = {vertices[i3].values[0],vertices[i3].values[1],vertices[i3].values[2]};
+            glm::vec3 eje1 = v1 - v0;
+            glm::vec3 eje2 = v2 - v0;
 
-            // Calcular el vector normal del triángulo actual
-            glm::vec3 normalTriangulo = glm::cross(v2 - v1, v3 - v1);
+            glm::vec3 normal = glm::cross(eje1,eje2);
 
-            // Sumar la normal calculada a los vértices correspondientes
-            normals[i1] += normalTriangulo;
-            normals[i2] += normalTriangulo;
-            normals[i3] += normalTriangulo;
+            for(int j = 0; j < 3; j++){
+                normals[indices[i+j]] += glm::vec4(normal,0); //w = 0 as is a vector
+            }
         }
-
-        // Normalizar los vectores de normales
-        for (size_t i = 0; i < normals.size(); ++i) {
-            normals[i] = glm::normalize(normals[i]);
+        // Normalize the normals
+        for (size_t i = 0; i < normals.size(); i++) {
+            normals[i] = glm::vec4(glm::normalize(normals[i]));
         }
+    }
+    for (size_t i = 0; i < normals.size(); i++) {
+        normals[i] = glm::normalize(normals[i]);
+    }
 
+    //Texture coordinates calculation
+    for(size_t i = 0; i < vertices.size(); i++){
+        float s = glm::acos(vertices[i].x/(1/sqrt(3)))/M_PI; //Assume radius is 1/sqrt(3) so sphere is large enough to contain a cube of 2x2 (NDC)
+        float t = (glm::atan(vertices[i].z/vertices[i].y)/M_PI)+0.5;
+        textureCoordinates.push_back(glm::vec2(s,t));
     }
 
     //Reset matrixes
@@ -494,6 +534,12 @@ void GeometryRender::loadObjFile() {
     lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
     upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
+
+    std::cout << "Imprimiendo coordenadas de las normales: " << normals.size() << std::endl;
+    for(size_t i = 0; i < normals.size(); i++){
+        std::cout << normals[i].x << " " << normals[i].y << " " << normals[i].z << std::endl;
+    }
+    std::cout << std::endl;
 
     loadGeometry();
 }
@@ -504,16 +550,16 @@ void GeometryRender::loadObjFile() {
  * @param dimension 0-> x 1->y 2->z
  * @return float value of the dimension
  */
-float GeometryRender::verticesDimension(const std::vector<Vec4>& vertices, int dimension) {
+float GeometryRender::verticesDimension(const std::vector<glm::vec4>& vertices, int dimension) {
     float maxCoord = std::numeric_limits<float>::lowest();
     float minCoord = std::numeric_limits<float>::max();
 
     for (const auto& vertex : vertices) {
-        if (vertex.values[dimension] > maxCoord) {
-            maxCoord = vertex.values[dimension];
+        if (vertex[dimension] > maxCoord) {
+            maxCoord = vertex[dimension];
         }
-        if (vertex.values[dimension] < minCoord) {
-            minCoord = vertex.values[dimension];
+        if (vertex[dimension] < minCoord) {
+            minCoord = vertex[dimension];
         }
     }
 
@@ -526,90 +572,92 @@ float GeometryRender::verticesDimension(const std::vector<Vec4>& vertices, int d
  * @param vertices vector de vertices de la figura
  * @return
  */
-std::vector<float> GeometryRender::getOrigin(const std::vector<Vec4>& vertices){
+glm::vec4 GeometryRender::getOrigin(const std::vector<glm::vec4>& vertices){
     // Calcular el centro de masa de la figura
-    std::vector<float> center= {0.0f, 0.0f, 0.0f};
+    glm::vec4 center (0.0f, 0.0f, 0.0f, 0.0f);
     for (const auto& vertex : vertices) {
-        center[0] += vertex.values[0];
-        center[1] += vertex.values[1];
-        center[2] += vertex.values[2];
+        center[0] += vertex.x;
+        center[1] += vertex.y;
+        center[2] += vertex.z;
     }
-    for(int i = 0; i < center.size(); i++){
+    for(size_t i = 0; i < 4; i++){
         center[i] /= static_cast<float>(vertices.size());
     }
     return center;
 }
 
+/**
+ * @brief configures the gui usage
+ */
 void GeometryRender::DrawGui() {
-        IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context.");
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context.");
 
-        static ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
-        static ImGuiFileDialog fileDialog;
-        static ImGuiFileDialog textureDialog;
+    static ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp;
+    static ImGuiFileDialog fileDialog;
+    static ImGuiFileDialog textureDialog;
 
-        ImGui::Begin("3D Studio");
+    ImGui::Begin("3D Studio");
 
-        if (ImGui::CollapsingHeader("OBJ File")) {
-            ImGui::Text("OBJ file: %s", objFileName.c_str());
-            if (ImGui::Button("Open File"))
-                fileDialog.OpenDialog("ChooseFileDlgKey", "Choose File", ".obj", ".");
+    if (ImGui::CollapsingHeader("OBJ File")) {
+        ImGui::Text("OBJ file: %s", objFileName.c_str());
+        if (ImGui::Button("Open File"))
+            fileDialog.OpenDialog("ChooseFileDlgKey", "Choose File", ".obj", ".");
 
-            if (fileDialog.Display("ChooseFileDlgKey")) {
-                if (fileDialog.IsOk()) {
-                    objFileName = fileDialog.GetCurrentFileName();
-                    objFilePath = fileDialog.GetCurrentPath();
-                    loadObjFile();
-                } else {
-                    std::cerr <<  "Error opening obj file ->" << objFileName << std::endl;
-                }
-                fileDialog.Close();
+        if (fileDialog.Display("ChooseFileDlgKey")) {
+            if (fileDialog.IsOk()) {
+                objFileName = fileDialog.GetCurrentFileName();
+                objFilePath = fileDialog.GetCurrentPath();
+                loadObjFile();
+            } else {
+                std::cerr <<  "Error opening obj file ->" << objFileName << std::endl;
             }
+            fileDialog.Close();
         }
+    }
 
-        if (ImGui::CollapsingHeader("Light")) {
-            ImGui::Text("Light source position");
-            ImGui::PushItemWidth(100);
-            ImGui::InputFloat3("Light Pos", glm::value_ptr(lightPos), "%.1f");
-            ImGui::PopItemWidth();
+    if (ImGui::CollapsingHeader("Light")) {
+        ImGui::Text("Light source position");
+        ImGui::PushItemWidth(100);
+        ImGui::InputFloat3("Light Pos", glm::value_ptr(lightPos), "%.1f");
+        ImGui::PopItemWidth();
 
-            ImGui::Text("Light source intensity:");
-            ImGui::ColorEdit3("Light", glm::value_ptr(lightColor));
-            ImGui::Text("Ambient light intensity:");
-            ImGui::ColorEdit3("Ambient", glm::value_ptr(ambientColor));
-        }
+        ImGui::Text("Light source intensity:");
+        ImGui::ColorEdit3("Light", glm::value_ptr(lightColor));
+        ImGui::Text("Ambient light intensity:");
+        ImGui::ColorEdit3("Ambient", glm::value_ptr(ambientColor));
+    }
 
-        if (ImGui::CollapsingHeader("Object Material")) {
-            ImGui::Text("Ambient coefficient:");
-            ImGui::ColorEdit3("Ambient color", glm::value_ptr(materialAmbient));
+    if (ImGui::CollapsingHeader("Object Material")) {
+        ImGui::Text("Ambient coefficient:");
+        ImGui::ColorEdit3("Ambient color", glm::value_ptr(materialAmbient));
 
-            ImGui::Text("Diffuse coefficient:");
-            ImGui::ColorEdit3("Diffuse color", glm::value_ptr(materialDiffuse));
+        ImGui::Text("Diffuse coefficient:");
+        ImGui::ColorEdit3("Diffuse color", glm::value_ptr(materialDiffuse));
 
-            ImGui::Text("Specular coefficient:");
-            ImGui::ColorEdit3("Specular color", glm::value_ptr(materialSpecular));
+        ImGui::Text("Specular coefficient:");
+        ImGui::ColorEdit3("Specular color", glm::value_ptr(materialSpecular));
 
-            ImGui::SliderFloat("Shininess", &materialShininess, 1.0f, 1000.0f, "%1.0f", flags);
-        }
+        ImGui::SliderFloat("Shininess", &materialShininess, 1.0f, 1000.0f, "%1.0f", flags);
+    }
 
-        if (ImGui::CollapsingHeader("Object Texture")) {
-            ImGui::Checkbox("Show texture", &textureShow);
-            ImGui::Text("Texture file: %s", textureFileName.c_str());
-            if (ImGui::Button("Open Texture File"))
-                textureDialog.OpenDialog("ChooseFileDlgKey", "Choose Texture File",
-                                         ".jpg,.bmp,.dds,.hdr,.pic,.png,.psd,.tga", ".");
+    if (ImGui::CollapsingHeader("Object Texture")) {
+        ImGui::Checkbox("Show texture", &textureShow);
+        ImGui::Text("Texture file: %s", textureFileName.c_str());
+        if (ImGui::Button("Open Texture File"))
+            textureDialog.OpenDialog("ChooseFileDlgKey", "Choose Texture File",
+                                     ".jpg,.bmp,.dds,.hdr,.pic,.png,.psd,.tga", ".");
 
-            if (textureDialog.Display("ChooseFileDlgKey")) {
-                if (textureDialog.IsOk()) {
-                    textureFileName = textureDialog.GetCurrentFileName();
-                    textureFilePath = textureDialog.GetCurrentPath();
-                    cout << "Texture file: " << textureFileName << endl << "Path: " << textureFilePath << endl;
-                } else {
-                    // Return a message to the user if the file could not be opened
-                }
-                // close
-                textureDialog.Close();
+        if (textureDialog.Display("ChooseFileDlgKey")) {
+            if (textureDialog.IsOk()) {
+                textureFileName = textureDialog.GetCurrentFileName();
+                textureFilePath = textureDialog.GetCurrentPath();
+                loadTexture(textureFilePath+"/"+textureFileName);
+            } else {
+                std::cerr << "Texture file can't be opened" << std::endl;
             }
+            textureDialog.Close();
         }
+    }
 
     if (ImGui::CollapsingHeader("Projection")) {
         const char* items[] = {"Perspective", "Parallel" };
@@ -674,9 +722,33 @@ void GeometryRender::DrawGui() {
         }
     }
 
-    ImGui::End();
+    if(ImGui::CollapsingHeader("Shading")){
+        const char* items[] = {"Phong", "Gouraud", "Wireframe" };
+        static int proj_current_idx = 0;
+        if (ImGui::Combo("Shading model", &proj_current_idx, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)));
+        if(proj_current_idx == 0){
+            illuminationModel = 0;
+            std::cout << illuminationModel << " Phong model activated" << std::endl;
+        }
+        if(proj_current_idx == 1){
+            illuminationModel = 1;
+            std::cout << illuminationModel << " Gouraud model activated" << std::endl;
+        }
+        if(proj_current_idx == 2){
+            illuminationModel = 2;
+            std::cout << illuminationModel << " Wireframe model activated" << std::endl;
+        }
     }
 
+ImGui::End();
+}
+
+/**
+ * @brief manages the cursor callback
+ * @param window
+ * @param xpos x position of the mouse
+ * @param ypos y position of the mouse
+ */
 void GeometryRender::cursorPositionCallBack(GLFWwindow *window, double xpos, double ypos) {
     ImGui_ImplGlfw_CursorPosCallback(window,xpos,ypos);
     if(mouse) {
@@ -686,10 +758,16 @@ void GeometryRender::cursorPositionCallBack(GLFWwindow *window, double xpos, dou
     }
 }
 
+
+/**
+ * @brief Computes the rotation movement of the camera with the mouse
+ * @param x current x position of the mouse
+ * @param y current y position of the mouse
+ */
 void GeometryRender::computeCameraMouse(float x, float y) {
 
     double deltaX = x - posX;
-    double deltaY = posY - y;
+    double deltaY = y - posY;
     yaw += deltaX * cameraSpeed;
     pitch += deltaY * cameraSpeed;
 
@@ -711,7 +789,6 @@ void GeometryRender::computeCameraMouse(float x, float y) {
         std::cout << "Up vector: " << upVector.x << " " << upVector.y << " " << upVector.z << std::endl;
         std::cout << "Look at: " << lookAt.x << " " << lookAt.y << " " << lookAt.z << std::endl;
         std::cout << "Matrices: " << std::endl;
-        matView = glm::lookAt(cameraPosition, lookAt, upVector);
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 std::cout << matView[j][i] << " ";
@@ -719,5 +796,58 @@ void GeometryRender::computeCameraMouse(float x, float y) {
             std::cout << std::endl;
         }
     }
+    matView = glm::lookAt(cameraPosition, lookAt, upVector);
 
+
+}
+
+/**
+ * @brief load the texture
+ * @param filePath path to the file
+ * @return GLuint with the id of the texture
+ */
+GLuint GeometryRender::loadTexture(const std::string& filePath){
+    int width, height, numChannels;
+    unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &numChannels, 0);
+    if (!data) {
+        std::cerr << "Failed to load texture: " << filePath << std::endl;
+        return 0;
+    }
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    GLenum colorNotation;
+    if(numChannels == 3)
+        colorNotation = GL_RGB;
+    else colorNotation = GL_RGBA;
+    glTexImage2D(GL_TEXTURE_2D, 0, colorNotation, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Set texture parameters (optional)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
+    std::cout << "Textura cargada" << std::endl;
+
+    return textureID;
+}
+
+/**
+ * Binds the texture to be used
+ */
+void GeometryRender::activateTexture() {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, locTexture);
+}
+
+/**
+ * Unbind the texture
+ */
+void GeometryRender::deactivateTexture() {
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

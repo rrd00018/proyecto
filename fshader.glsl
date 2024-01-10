@@ -1,40 +1,67 @@
 #version 330 core
 
 in vec3 Normal;
-in vec3 FragPos; // Posición del fragmento en eye space
+in vec3 FragPos;
+in vec2 TextCoords;
+in vec3 cameraPositionWorld;
+in vec3 lightPositionWorld;
+in vec3 viewDir;
+in vec3 lightDir;
+//PASANDO EL LIGHT DIR Y VIEW DIR AL VERTEX SHADER
 
 out vec4 FragColor;
 
-const vec3 modelColor = vec3(1.0,1.0,1.0);
-const float ambientStrength = 0.1;
-
-uniform vec3 cameraPosition;
+uniform sampler2D myTexture;
 uniform vec3 lightColor;
-uniform vec3 lightPos;
 uniform vec3 ambientColor;
 uniform vec3 materialAmbient;
 uniform vec3 materialDiffuse;
 uniform vec3 materialSpecular;
 uniform float materialShininess;
+uniform int illuminationModel;
 
-void main() {
-    // Calcula el vector de luz y la dirección de vista
-    vec3 lightDir = normalize(lightPos - FragPos);
-    vec3 viewDir = normalize(cameraPosition - FragPos);
-
-    // Calcula la componente difusa
-    float diff = max(dot(Normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor * materialDiffuse;
-
-    // Calcula la componente especular
-    vec3 reflectDir = reflect(-lightDir, Normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), materialShininess);
-    vec3 specular = materialSpecular * spec * lightColor;
-
-    // Calcula la componente ambiental
+void main()
+{
+   /* // Diferentes modelos de iluminación
     vec3 ambient = ambientColor * materialAmbient;
+    vec3 norm = normalize(Normal);
 
-    // Combina todas las componentes para obtener el color final
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = lightColor * (diff * materialDiffuse);
+
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), materialShininess);
+    vec3 specular = lightColor * (spec * materialSpecular);
+
     vec3 result = ambient + diffuse + specular;
-    FragColor = vec4(result, 1.0);
+
+    if (illuminationModel == 0) { // Phong
+        FragColor = vec4(result, 1.0);
+    } else if (illuminationModel == 1) { // Otro modelo de iluminación
+        // Implementar otro modelo de iluminación si es necesario
+    } else if(illuminationModel == 2){
+        FragColor = vec4(1,0,0,0);
+    }
+
+    // Puedes agregar mapeo de texturas si es necesario
+    vec3 textureColor = texture(myTexture, TextCoords).xyz;
+    FragColor = vec4(result,1.0);
+*/
+
+    vec3 n = normalize(Normal);
+    vec3 l = normalize(lightDir);
+    vec3 v = normalize(viewDir);
+    vec3 r = reflect(-l,n);
+
+    float cosTheta = dot( n,l );
+    float cosAlpha = clamp( dot( v,r ), 0,1 );
+
+    vec3 ambient = materialAmbient * ambientColor;
+    vec3 diffuse = materialDiffuse * lightColor * cosTheta;
+    vec3 specular = materialSpecular * lightColor * cosAlpha;
+
+
+    vec3 result = ambient + diffuse + specular;
+
+    FragColor = vec4(result,1.0);
 }
