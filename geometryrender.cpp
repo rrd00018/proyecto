@@ -95,26 +95,20 @@ void GeometryRender::loadGeometry(void)
     if(vertices.empty()) {
         // Define vertices in array
         objFilePath = "/home/rafa/CLionProjects/proyecto/resources";
-        objFileName = "cube.obj";
+        objFileName = "sphere_large.obj";
         loadObjFile();
     }
 
     if(locTexture == 0) {
         if (textureFilePath == "") textureFilePath = "/home/rafa/CLionProjects/proyecto/resources";
         if (textureFileName == "")
-            textureFileName = "colorful-tile-mosaic-square-background-modern-abstract-gradient-card-business-geometric-poster-vector.jpg";
+            textureFileName = "bricks.bmp";
         locTexture = loadTexture(textureFilePath + "/" + textureFileName);
 
     }
 
-
-
     glUseProgram(program);
     glBindVertexArray(vao);
-
-    // Set the pointers of locVertices to the right places
-    glVertexAttribPointer(locVertices, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
-    glEnableVertexAttribArray(locVertices);
 
     // Load object data to the array buffer and index array
     size_t vSize = vertices.size()*sizeof(glm::vec4);
@@ -122,15 +116,26 @@ void GeometryRender::loadGeometry(void)
     size_t nSize = normals.size()*sizeof(glm::vec4);
     size_t tSize = textureCoordinates.size()*sizeof(glm::vec2);
 
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, iSize, indices.data(), GL_STATIC_DRAW );
+    //Buffer de indices
+   // glBufferData( GL_ELEMENT_ARRAY_BUFFER, iSize, indices.data(), GL_STATIC_DRAW );
+
+    //Buffer de vertices-> Contiene posicion, normal, textura
     glBufferData(GL_ARRAY_BUFFER, vSize + nSize + tSize, NULL,GL_STATIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, 0, vSize,vertices.data());
     glBufferSubData(GL_ARRAY_BUFFER, vSize, nSize,normals.data());
     glBufferSubData(GL_ARRAY_BUFFER, nSize+vSize, tSize,textureCoordinates.data());
 
+    // Set the pointers of locVertices to the right places
+    glVertexAttribPointer(locVertices, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+    glEnableVertexAttribArray(locVertices);
+
     //Set the pointers of locNormal to the right places
-    glVertexAttribPointer(locNormals, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vSize));
+    glVertexAttribPointer(locNormals, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vSize));
     glEnableVertexAttribArray(locNormals);
+
+    //Set the pointers of locTextureCoordinates to the right place
+    glVertexAttribPointer(locTextureCoordinates, 2, GL_FLOAT,GL_FALSE,0, BUFFER_OFFSET(vSize+nSize));
+    glEnableVertexAttribArray(locTextureCoordinates);
 
     glBindVertexArray(0);
     glUseProgram(0);
@@ -189,8 +194,7 @@ void GeometryRender::display()
         activateTexture();
 
     // Call OpenGL to draw the triangle
-    glDrawElements(GL_TRIANGLES, static_cast<int>(indices.size()), GL_UNSIGNED_INT, BUFFER_OFFSET(0));
-
+    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
     // Not to be called in release...
     debugShader();
 
@@ -390,6 +394,7 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
 void GeometryRender::loadObjFile() {
     std::string nombre = objFilePath+"/"+objFileName;
     std::ifstream file(nombre);
+    std::vector<glm::vec4> verticesFinal;
     if (!file.is_open()) {
         std::cerr << "Error: Unable to open file: " << nombre << std::endl;
     }
@@ -437,6 +442,7 @@ void GeometryRender::loadObjFile() {
                     getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
                     int index = stoi(indice);
                     indices.push_back(index - 1);
+                    verticesFinal.push_back(vertices[index-1]);
                     if(!normalesArchivo.empty()){
                         size_t pos = v[i].find_last_of('/')+1;
                         int normalVertice = stoi(v[i].substr(pos)) - 1;
@@ -494,14 +500,14 @@ void GeometryRender::loadObjFile() {
     }
 
     //Normal Calculation
-    if(normalesArchivo.empty()){
-        normals = std::vector<glm::vec4>(vertices.size(), glm::vec4(0.0f));
+    if(true){
+        normals = std::vector<glm::vec4>(verticesFinal.size(), glm::vec4(0.0f));
         std::cout << normals.size() << std::endl;
         //Iterate through the triangles
-        for (size_t i = 0; i < indices.size(); i += 3) {
-            glm::vec3 v0 = glm::vec3(vertices[indices[i]].x, vertices[indices[i]].y, vertices[indices[i]].z);
-            glm::vec3 v1 = glm::vec3(vertices[indices[i+1]].x, vertices[indices[i+1]].y, vertices[indices[i+1]].z);
-            glm::vec3 v2 = glm::vec3(vertices[indices[i+2]].x, vertices[indices[i+2]].y, vertices[indices[i+2]].z);
+        for (size_t i = 0; i < verticesFinal.size(); i += 3) {
+            glm::vec3 v0 = glm::vec3(verticesFinal[i].x, verticesFinal[i].y, verticesFinal[i].z);
+            glm::vec3 v1 = glm::vec3(verticesFinal[i+1].x, verticesFinal[i+1].y, verticesFinal[i+1].z);
+            glm::vec3 v2 = glm::vec3(verticesFinal[i+2].x, verticesFinal[i+2].y, verticesFinal[i+2].z);
 
             glm::vec3 eje1 = v1 - v0;
             glm::vec3 eje2 = v2 - v0;
@@ -509,13 +515,15 @@ void GeometryRender::loadObjFile() {
             glm::vec3 normal = glm::cross(eje1,eje2);
 
             for(int j = 0; j < 3; j++){
-                normals[indices[i+j]] += glm::vec4(normal,0); //w = 0 as is a vector
+                normals[i+j] = glm::vec4(normal,0); //w = 0 as is a vector
             }
         }
         // Normalize the normals
         for (size_t i = 0; i < normals.size(); i++) {
             normals[i] = glm::vec4(glm::normalize(normals[i]));
         }
+        vertices.clear();
+        vertices = verticesFinal;
     }
     for (size_t i = 0; i < normals.size(); i++) {
         normals[i] = glm::normalize(normals[i]);
@@ -540,7 +548,11 @@ void GeometryRender::loadObjFile() {
         std::cout << normals[i].x << " " << normals[i].y << " " << normals[i].z << std::endl;
     }
     std::cout << std::endl;
-
+    std::cout << "vertex" << vertices.size() << std::endl;
+    for(size_t i = 0; i < vertices.size(); i++){
+        std::cout << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;
+    }
+    std::cout << vertices.size() <<std::endl;
     loadGeometry();
 }
 
@@ -809,6 +821,7 @@ void GeometryRender::computeCameraMouse(float x, float y) {
 GLuint GeometryRender::loadTexture(const std::string& filePath){
     int width, height, numChannels;
     unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &numChannels, 0);
+    std::cout << " carga imagen" << std::endl;
     if (!data) {
         std::cerr << "Failed to load texture: " << filePath << std::endl;
         return 0;

@@ -3,10 +3,7 @@
 in vec3 Normal;
 in vec3 FragPos;
 in vec2 TextCoords;
-in vec3 cameraPositionWorld;
-in vec3 lightPositionWorld;
-in vec3 viewDir;
-in vec3 lightDir;
+
 //PASANDO EL LIGHT DIR Y VIEW DIR AL VERTEX SHADER
 
 out vec4 FragColor;
@@ -17,51 +14,31 @@ uniform vec3 ambientColor;
 uniform vec3 materialAmbient;
 uniform vec3 materialDiffuse;
 uniform vec3 materialSpecular;
+uniform vec3 cameraPosition;
+uniform vec3 lightPos;
 uniform float materialShininess;
 uniform int illuminationModel;
 
+
 void main()
 {
-   /* // Diferentes modelos de iluminación
-    vec3 ambient = ambientColor * materialAmbient;
+    // Diferentes modelos de iluminación
+    float ambientStrength = 0.1;
+    vec3 ambient = ambientStrength * lightColor;
+
+    // diffuse
     vec3 norm = normalize(Normal);
-
+    vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = lightColor * (diff * materialDiffuse);
+    vec3 diffuse = diff * lightColor;
 
+    // specular
+    float specularStrength = 0.5;
+    vec3 viewDir = normalize(cameraPosition - FragPos);
     vec3 reflectDir = reflect(-lightDir, norm);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), materialShininess);
-    vec3 specular = lightColor * (spec * materialSpecular);
+    vec3 specular = specularStrength * spec * lightColor;
 
-    vec3 result = ambient + diffuse + specular;
-
-    if (illuminationModel == 0) { // Phong
-        FragColor = vec4(result, 1.0);
-    } else if (illuminationModel == 1) { // Otro modelo de iluminación
-        // Implementar otro modelo de iluminación si es necesario
-    } else if(illuminationModel == 2){
-        FragColor = vec4(1,0,0,0);
-    }
-
-    // Puedes agregar mapeo de texturas si es necesario
-    vec3 textureColor = texture(myTexture, TextCoords).xyz;
-    FragColor = vec4(result,1.0);
-*/
-
-    vec3 n = normalize(Normal);
-    vec3 l = normalize(lightDir);
-    vec3 v = normalize(viewDir);
-    vec3 r = reflect(-l,n);
-
-    float cosTheta = dot( n,l );
-    float cosAlpha = clamp( dot( v,r ), 0,1 );
-
-    vec3 ambient = materialAmbient * ambientColor;
-    vec3 diffuse = materialDiffuse * lightColor * cosTheta;
-    vec3 specular = materialSpecular * lightColor * cosAlpha;
-
-
-    vec3 result = ambient + diffuse + specular;
-
-    FragColor = vec4(result,1.0);
+    vec3 textureColor =  vec3(texture(myTexture,TextCoords));
+    FragColor = vec4(diffuse * textureColor,1);
 }
