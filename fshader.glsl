@@ -42,12 +42,17 @@ void main()
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), materialShininess);
         specular = specularStrength * spec * materialSpecular * lightColor;
     }
-    vec3 textureColor =  vec3(texture(myTexture,TextCoords));
+    vec4 textureData = texture(myTexture,TextCoords);
+    vec3 textureColor = textureData.xyz;
     vec3 result = ambient + diffuse + specular;
 
-    if(textureShow == 1){
-        FragColor = vec4(result * textureColor, 1);
-    }else{
-        FragColor = vec4(result, 1);
+    if(illuminationModel == 1){
+        FragColor = vec4(1,0,0,0);
+    }else {
+        if(textureShow == 0){
+            FragColor = vec4(result * textureColor, textureData.a);
+        }else{
+            FragColor = vec4(result,1);
+        }
     }
 }

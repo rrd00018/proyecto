@@ -42,18 +42,15 @@ void GeometryRender::initialize()
     illuminationModel = 0;
     glUniform1i(locIlluminationModel,illuminationModel);
 
+    //Texture yes/no
+    locTextureShow = glGetUniformLocation(program,"textureShow");
+    textureShow = 1;
+    glUniform1i(locTextureShow,textureShow);
+
     // Get locations of the attributes in the shader
     locVertices = glGetAttribLocation( program, "vPosition");
     locNormals = glGetAttribLocation(program,"vNormal");
     locTextureCoordinates = glGetAttribLocation(program,"textureCoordinates");
-    locTextureShowToShader = glGetAttribLocation(program,"textureShow");
-
-    //Initialize the texture
-    textureShow = false;
-    textureShowToShader = 0;
-    textureFileName = "";
-    textureFilePath = "";
-
 
     //Initializes matrixes
     matModel = glm::mat4(1.0f);
@@ -93,13 +90,6 @@ void GeometryRender::loadGeometry(void)
         objFilePath = "/home/rafa/CLionProjects/proyecto/resources";
         objFileName = "sphere_large.obj";
         loadObjFile();
-    }
-
-    if(locTexture == 0) {
-        if (textureFilePath == "") textureFilePath = "/home/rafa/CLionProjects/proyecto/resources";
-        if (textureFileName == "")
-            textureFileName = "bricks.bmp";
-        locTexture = loadTexture(textureFilePath + "/" + textureFileName);
     }
 
     glUseProgram(program);
@@ -170,6 +160,7 @@ void GeometryRender::display()
     glUniform3fv(locMaterialDiffuse, 1, glm::value_ptr(materialDiffuse));
     glUniform3fv(locMaterialSpecular, 1, glm::value_ptr(materialSpecular));
     glUniform1i(locIlluminationModel,illuminationModel);
+    glUniform1i(locTextureShow,textureShow);
 
     //Texture things to shader
     glUniform1i(glGetUniformLocation(program, "myTexture"), 0);
@@ -181,20 +172,10 @@ void GeometryRender::display()
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
-    if(textureShow) {
-        activateTexture();
-        textureShowToShader = 1;
-    }else textureShowToShader = 0;
-
-    //Texture showing to shader
-    glUniform1i(locTextureShowToShader,textureShowToShader);
-
-    // Call OpenGL to draw the triangle
+    // Call OpenGL to draw the triangle not using indexes to allow the duplicate vertices and normals to work correctly as Oscar told me
     glDrawArrays(GL_TRIANGLES, 0, vertices.size());
     // Not to be called in release...
     debugShader();
-
-    deactivateTexture();
 
     glBindVertexArray(0);
     glUseProgram(0);
@@ -646,7 +627,8 @@ void GeometryRender::DrawGui() {
     }
 
     if (ImGui::CollapsingHeader("Object Texture")) {
-        ImGui::Checkbox("Show texture", &textureShow);
+        const char* items[] = {"Yes", "No" };
+        if (ImGui::Combo("Show texture", &textureShow, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)));
         ImGui::Text("Texture file: %s", textureFileName.c_str());
         if (ImGui::Button("Open Texture File"))
             textureDialog.OpenDialog("ChooseFileDlgKey", "Choose Texture File",
@@ -662,6 +644,13 @@ void GeometryRender::DrawGui() {
             }
             textureDialog.Close();
         }
+
+        if(textureShow == 0){
+            activateTexture();
+        }else{
+            deactivateTexture();
+        }
+
     }
 
     if (ImGui::CollapsingHeader("Projection")) {
@@ -702,19 +691,15 @@ void GeometryRender::DrawGui() {
     }
 
     if(ImGui::CollapsingHeader("Shading")){
-        const char* items[] = {"Phong", "Gouraud", "Wireframe" };
-        static int proj_current_idx = 0;
-        if (ImGui::Combo("Shading model", &proj_current_idx, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)));
-        if(proj_current_idx == 0){
+        const char* items[] = {"Phong", "Wireframe" };
+        static int shading_current_idx = 0;
+        if (ImGui::Combo("Shading model", &shading_current_idx, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)));
+        if(shading_current_idx == 0){
             illuminationModel = 0;
             std::cout << illuminationModel << " Phong model activated" << std::endl;
         }
-        if(proj_current_idx == 1){
+        if(shading_current_idx == 1){
             illuminationModel = 1;
-            std::cout << illuminationModel << " Gouraud model activated" << std::endl;
-        }
-        if(proj_current_idx == 2){
-            illuminationModel = 2;
             std::cout << illuminationModel << " Wireframe model activated" << std::endl;
         }
     }
@@ -806,11 +791,14 @@ GLuint GeometryRender::loadTexture(const std::string& filePath){
 void GeometryRender::activateTexture() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, locTexture);
+    display();
 }
 
 /**
  * Unbind the texture
  */
 void GeometryRender::deactivateTexture() {
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    display();
 }

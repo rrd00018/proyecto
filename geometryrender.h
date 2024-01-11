@@ -74,8 +74,7 @@ private:
     int illuminationModel;
 
     //Texture
-    GLuint locTexture = 0;
-    GLuint locTextureShowToShader;
+    GLuint locTexture;
     GLuint locTextureCoordinates;
 
 
@@ -126,8 +125,8 @@ private:
     std::string objFilePath;
     std::string textureFileName;
     std::string textureFilePath;
-    bool textureShow = false;
-    int textureShowToShader = 0;
+    int textureShow = 1;
+    GLuint locTextureShow;
 
     float fov = 60.0f;
     float farplane = 500.0f;
