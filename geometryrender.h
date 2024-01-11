@@ -52,7 +52,6 @@ private:
 
     // Geometry data
     std::vector<glm::vec4> vertices;
-    std::vector<unsigned int> indices;
     std::vector<glm::vec4> normals;
     std::vector<glm::vec2> textureCoordinates;
 
@@ -128,6 +127,7 @@ private:
     std::string textureFileName;
     std::string textureFilePath;
     bool textureShow = false;
+    int textureShowToShader = 0;
 
     float fov = 60.0f;
     float farplane = 500.0f;

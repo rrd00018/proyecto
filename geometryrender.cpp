@@ -70,11 +70,6 @@ void GeometryRender::initialize()
     glGenBuffers( 1, &vBuffer);
     glBindBuffer( GL_ARRAY_BUFFER, vBuffer);
 
-    /* Create buffer in the shared display list space and 
-       bind it as GL_ELEMENT_ARRAY_BUFFER */
-    glGenBuffers(1, &iBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iBuffer);
-
     // Get locations of the attributes in the shader
     locVertices = glGetAttribLocation( program, "vPosition");
     locNormals = glGetAttribLocation(program,"vNormal");
@@ -112,12 +107,8 @@ void GeometryRender::loadGeometry(void)
 
     // Load object data to the array buffer and index array
     size_t vSize = vertices.size()*sizeof(glm::vec4);
-    size_t iSize = indices.size()*sizeof(unsigned int);
     size_t nSize = normals.size()*sizeof(glm::vec4);
     size_t tSize = textureCoordinates.size()*sizeof(glm::vec2);
-
-    //Buffer de indices
-   // glBufferData( GL_ELEMENT_ARRAY_BUFFER, iSize, indices.data(), GL_STATIC_DRAW );
 
     //Buffer de vertices-> Contiene posicion, normal, textura
     glBufferData(GL_ARRAY_BUFFER, vSize + nSize + tSize, NULL,GL_STATIC_DRAW);
@@ -400,11 +391,10 @@ void GeometryRender::loadObjFile() {
     }
 
     vertices.clear();
-    indices.clear();
+    normals.clear();
     textureCoordinates.clear();
 
-    std::vector<glm::vec4> normalesArchivo;
-    std::vector<int> normalesAsignadas;
+    std::vector<glm::vec4> normalsFinal;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -421,13 +411,8 @@ void GeometryRender::loadObjFile() {
             iss >> vertex.x >> vertex.y >> vertex.z;
             vertices.push_back(vertex);
         } else if (type == "f") {
-            while(normals.size() < vertices.size()){
-                normals.push_back(glm::vec4(glm::vec3(1.0f),0.0f));
-                normalesAsignadas.push_back(0);
-            }
             // Lee los índices de una cara y los agrega al vector de índices
             std::string values = line.substr(2,line.size()-2); //Coge los datos eliminando el prefijo
-            //std::cout << values << endl;
             std::stringstream ss(values);
             std::vector<string> v;
             std::string token;
@@ -438,42 +423,43 @@ void GeometryRender::loadObjFile() {
             if(v.size() == 3) {
                 for (size_t i = 0; i < 3; i++) {
                     std::stringstream s1(v[i]);
-                    std::string indice;
-                    getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
-                    int index = stoi(indice);
-                    indices.push_back(index - 1);
-                    verticesFinal.push_back(vertices[index-1]);
-                    if(!normalesArchivo.empty()){
+                    std::string index;
+                    getline(s1, index, '/');
+                    int vertexIndex = stoi(index) -1;
+                    //Add to the vertex vector the vetex specified by the index (duplicate vertexs)
+                    verticesFinal.push_back(vertices[vertexIndex]);
+                    //If normals have been read from the file
+                    if(!normals.empty()){
                         size_t pos = v[i].find_last_of('/')+1;
-                        int normalVertice = stoi(v[i].substr(pos)) - 1;
-                        normals[index-1] += normalesArchivo[normalVertice];
-                        normalesAsignadas[index-1] += 1;
+                        int normalVertexIndex = stoi(v[i].substr(pos)) - 1;
+                        //Adds to the normals vector the normal corresponding to that vertex
+                        normalsFinal.push_back(normals[normalVertexIndex]);
                     }
                 }
             }else if(v.size() == 4){
                 for (int i = 0; i < 3; i++) {
                     std::stringstream s1(v[i]);
-                    std::string indice;
-                    getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
-                    int index = stoi(indice);
-                    indices.push_back(index - 1);
-                    if(!normalesArchivo.empty()){
-                        size_t pos = v[i].find_last_of('/');
-                        std::string normalVertice = v[i].substr(pos+1);
-                        normals[index-1] += normalesArchivo[stoi(normalVertice)-1];
+                    std::string index;
+                    getline(s1, index, '/');
+                    int vertexIndex = stoi(index)-1;
+                    verticesFinal.push_back(vertices[vertexIndex]);
+                    if(!normals.empty()){
+                        size_t pos = v[i].find_last_of('/')+1;
+                        int normalVertexIndex = stoi(v[i].substr(pos)) - 1;
+                        //Adds to the normals vector the normal corresponding to that vertex
+                        normalsFinal.push_back(normals[normalVertexIndex]);
                     }
                 }
                 for (int i = 2; i < 5; i++) {
                     std::stringstream s1(v[i%4]);
-                    std::string indice;
-                    getline(s1, indice, '/'); //Cuando llega a la primera barra para para coger el indice
-                    int index = stoi(indice);
-                    indices.push_back(index - 1);
-                    if(!normalesArchivo.empty()){
-                        size_t pos = v[i%4].find_last_of('/');
-                        std::string normalVertice = v[i%4].substr(pos+1);
-                        std::cout << normalVertice << std::endl;
-                        normals[index-1] += normalesArchivo[stoi(normalVertice)-1];
+                    std::string index;
+                    getline(s1, index, '/');
+                    int vertexIndex = stoi(index)-1;
+                    verticesFinal.push_back(vertices[vertexIndex]);
+                    if(!normals.empty()){
+                        size_t pos = v[i%4].find_last_of('/') + 1;
+                        int normalVertexIndex = stoi(v[i%4].substr(pos)) -1;
+                        normalsFinal.push_back(normals[normalVertexIndex]);
                     }
                 }
             }
@@ -481,13 +467,17 @@ void GeometryRender::loadObjFile() {
         } else if (type == "vn"){
             glm::vec4 normal(0, 0, 0,0);
             iss >> normal.x >> normal.y >> normal.z;
-            normalesArchivo.push_back(normal);
-            normalesAsignadas.push_back(0);
+            normals.push_back(normal);
         } else if (type == "vt"){
-
+            /*glm::vec2 texture(0, 0);
+            iss >> texture.x >> texture.y;
+            textureCoordinates.push_back(texture);*/
         }
     }
     file.close();
+
+    vertices = verticesFinal;
+
     //Calculate scalate factor as 1/maxDimension
     float maxDimension = std::max(std::max(verticesDimension(vertices, 0), verticesDimension(vertices, 1)), verticesDimension(vertices, 2));
     float scaleFactor = 1.0f / maxDimension;
@@ -500,14 +490,13 @@ void GeometryRender::loadObjFile() {
     }
 
     //Normal Calculation
-    if(true){
-        normals = std::vector<glm::vec4>(verticesFinal.size(), glm::vec4(0.0f));
-        std::cout << normals.size() << std::endl;
+    if(normals.empty()){
+        normals = std::vector<glm::vec4>(vertices.size(), glm::vec4(0.0f));
         //Iterate through the triangles
-        for (size_t i = 0; i < verticesFinal.size(); i += 3) {
-            glm::vec3 v0 = glm::vec3(verticesFinal[i].x, verticesFinal[i].y, verticesFinal[i].z);
-            glm::vec3 v1 = glm::vec3(verticesFinal[i+1].x, verticesFinal[i+1].y, verticesFinal[i+1].z);
-            glm::vec3 v2 = glm::vec3(verticesFinal[i+2].x, verticesFinal[i+2].y, verticesFinal[i+2].z);
+        for (size_t i = 0; i < vertices.size(); i += 3) {
+            glm::vec3 v0 = glm::vec3(vertices[i].x, vertices[i].y, vertices[i].z);
+            glm::vec3 v1 = glm::vec3(vertices[i+1].x, vertices[i+1].y, vertices[i+1].z);
+            glm::vec3 v2 = glm::vec3(vertices[i+2].x, vertices[i+2].y, vertices[i+2].z);
 
             glm::vec3 eje1 = v1 - v0;
             glm::vec3 eje2 = v2 - v0;
@@ -522,12 +511,11 @@ void GeometryRender::loadObjFile() {
         for (size_t i = 0; i < normals.size(); i++) {
             normals[i] = glm::vec4(glm::normalize(normals[i]));
         }
-        vertices.clear();
-        vertices = verticesFinal;
+    }else{
+        normals = normalsFinal;
     }
-    for (size_t i = 0; i < normals.size(); i++) {
-        normals[i] = glm::normalize(normals[i]);
-    }
+
+
 
     //Texture coordinates calculation
     for(size_t i = 0; i < vertices.size(); i++){
@@ -539,20 +527,20 @@ void GeometryRender::loadObjFile() {
     //Reset matrixes
     matModel = glm::mat4 (1.0f);
     cameraPosition = glm::vec3(0.0f, 0.0f, 2.0f);
-    lookAt = glm::vec3(0.0f, 0.0f, 0.0f); //punto de referencia
+    lookAt = glm::vec3(0.0f, 0.0f, 0.0f);
     upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
-
+/*
     std::cout << "Imprimiendo coordenadas de las normales: " << normals.size() << std::endl;
     for(size_t i = 0; i < normals.size(); i++){
         std::cout << normals[i].x << " " << normals[i].y << " " << normals[i].z << std::endl;
     }
     std::cout << std::endl;
-    std::cout << "vertex" << vertices.size() << std::endl;
+    std::cout << "Imprimiendo coordenadas de los vertices: " << vertices.size() << std::endl;
     for(size_t i = 0; i < vertices.size(); i++){
         std::cout << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;
     }
-    std::cout << vertices.size() <<std::endl;
+*/
     loadGeometry();
 }
 
@@ -682,32 +670,6 @@ void GeometryRender::DrawGui() {
             aspectRatio = (float) width()/height();
             matProjection = glm::perspective(glm::radians(fov), aspectRatio, farplane, nearPlane);
 
-            if(debug) {
-                std::cout << "Projection Matrix:" << std::endl;
-                for (int i = 0; i < 4; i++) {
-                    for (int j = 0; j < 4; j++) {
-                        std::cout << matProjection[i][j] << " ";
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << "View Matrix:" << std::endl;
-                for (int i = 0; i < 4; i++) {
-                    for (int j = 0; j < 4; j++) {
-                        std::cout << matView[i][j] << " ";
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << "Model Matrix:" << std::endl;
-                for (int i = 0; i < 4; i++) {
-                    for (int j = 0; j < 4; j++) {
-                        std::cout << matModel[i][j] << " ";
-                    }
-                    std::cout << std::endl;
-                }
-                std::cout << aspectRatio << endl;
-                std::cout << "----------------------------------" << std::endl;
-
-            }
         }
         if (proj_current_idx == 1) {
             ImGui::SliderFloat("Top",&top, 1.0f, 100.0f, "%.1f", flags);
@@ -789,28 +751,7 @@ void GeometryRender::computeCameraMouse(float x, float y) {
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     lookAt = cameraPosition + glm::normalize(direction);
 
-    //Debug text
-    if(debug) {
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << "Yaw: " << yaw << " Pitch: " << pitch << std::endl;
-        std::cout << "X: " << cos(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
-        std::cout << "Z: " << sin(glm::radians(yaw)) << " " << cos(glm::radians(pitch)) << std::endl;
-        std::cout << "Camera position: " << cameraPosition.x << " " << cameraPosition.y << " " << cameraPosition.z
-                  << std::endl;
-        std::cout << "Direction: " << direction.x << " " << direction.y << " " << direction.z << std::endl;
-        std::cout << "Up vector: " << upVector.x << " " << upVector.y << " " << upVector.z << std::endl;
-        std::cout << "Look at: " << lookAt.x << " " << lookAt.y << " " << lookAt.z << std::endl;
-        std::cout << "Matrices: " << std::endl;
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                std::cout << matView[j][i] << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
-
-
 }
 
 /**
@@ -821,7 +762,6 @@ void GeometryRender::computeCameraMouse(float x, float y) {
 GLuint GeometryRender::loadTexture(const std::string& filePath){
     int width, height, numChannels;
     unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &numChannels, 0);
-    std::cout << " carga imagen" << std::endl;
     if (!data) {
         std::cerr << "Failed to load texture: " << filePath << std::endl;
         return 0;
@@ -845,7 +785,6 @@ GLuint GeometryRender::loadTexture(const std::string& filePath){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     stbi_image_free(data);
-    std::cout << "Textura cargada" << std::endl;
 
     return textureID;
 }

@@ -40,5 +40,5 @@ void main()
     vec3 specular = specularStrength * spec * lightColor;
 
     vec3 textureColor =  vec3(texture(myTexture,TextCoords));
-    FragColor = vec4(diffuse * textureColor,1);
+    FragColor = vec4(diffuse,1);
 }

@@ -1,8 +1,9 @@
 #version 330 core
 
 layout(location = 0) in vec4 vPosition;
-layout(location = 2) in vec2 textureCoordinates;
 layout(location = 1) in vec3 vNormal;
+layout(location = 2) in vec2 textureCoordinates;
+
 
 
 out vec3 Normal;
@@ -23,10 +24,11 @@ void main() {
     //Convierte la posicion del vertice a coordenadas del mundo
     FragPos =  vec3(M * vPosition);
 
-    float s = acos(vPosition.x/1/sqrt(3))/M_PI;
+    float s = acos(vPosition.x/(1/sqrt(3)))/M_PI;
     float t = (atan(vPosition.z/vPosition.y)/M_PI)+0.5;
     TextCoords = vec2(s,t);
 
     //Transform the camera positon to world coordinates
     Normal = vNormal;
+
 }
