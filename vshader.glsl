@@ -29,6 +29,5 @@ void main() {
     TextCoords = vec2(s,t);
 
     //Transform the camera positon to world coordinates
-    Normal = vNormal;
-
+    Normal = mat3(transpose(inverse(M))) * vNormal;
 }
