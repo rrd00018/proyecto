@@ -42,8 +42,15 @@ void GeometryRender::initialize()
     illuminationModel = 0;
     glUniform1i(locIlluminationModel,illuminationModel);
 
+    // Get locations of the attributes in the shader
+    locVertices = glGetAttribLocation( program, "vPosition");
+    locNormals = glGetAttribLocation(program,"vNormal");
+    locTextureCoordinates = glGetAttribLocation(program,"textureCoordinates");
+    locTextureShowToShader = glGetAttribLocation(program,"textureShow");
+
     //Initialize the texture
     textureShow = false;
+    textureShowToShader = 0;
     textureFileName = "";
     textureFilePath = "";
 
@@ -70,12 +77,6 @@ void GeometryRender::initialize()
     glGenBuffers( 1, &vBuffer);
     glBindBuffer( GL_ARRAY_BUFFER, vBuffer);
 
-    // Get locations of the attributes in the shader
-    locVertices = glGetAttribLocation( program, "vPosition");
-    locNormals = glGetAttribLocation(program,"vNormal");
-    locTextureCoordinates = glGetAttribLocation(program,"textureCoordinates");
-    locTextureShow = glGetAttribLocation(program,"textureShow");
-
     glBindVertexArray(0);
     glUseProgram(0);
 
@@ -99,7 +100,6 @@ void GeometryRender::loadGeometry(void)
         if (textureFileName == "")
             textureFileName = "bricks.bmp";
         locTexture = loadTexture(textureFilePath + "/" + textureFileName);
-
     }
 
     glUseProgram(program);
@@ -110,7 +110,7 @@ void GeometryRender::loadGeometry(void)
     size_t nSize = normals.size()*sizeof(glm::vec4);
     size_t tSize = textureCoordinates.size()*sizeof(glm::vec2);
 
-    //Buffer de vertices-> Contiene posicion, normal, textura
+    //Verte buffer-> Contains position, normal, texture
     glBufferData(GL_ARRAY_BUFFER, vSize + nSize + tSize, NULL,GL_STATIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, 0, vSize,vertices.data());
     glBufferSubData(GL_ARRAY_BUFFER, vSize, nSize,normals.data());
@@ -181,8 +181,13 @@ void GeometryRender::display()
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
-    if(textureShow)
+    if(textureShow) {
         activateTexture();
+        textureShowToShader = 1;
+    }else textureShowToShader = 0;
+
+    //Texture showing to shader
+    glUniform1i(locTextureShowToShader,textureShowToShader);
 
     // Call OpenGL to draw the triangle
     glDrawArrays(GL_TRIANGLES, 0, vertices.size());
@@ -651,7 +656,7 @@ void GeometryRender::DrawGui() {
             if (textureDialog.IsOk()) {
                 textureFileName = textureDialog.GetCurrentFileName();
                 textureFilePath = textureDialog.GetCurrentPath();
-                loadTexture(textureFilePath+"/"+textureFileName);
+                locTexture = loadTexture(textureFilePath+"/"+textureFileName);
             } else {
                 std::cerr << "Texture file can't be opened" << std::endl;
             }
@@ -765,6 +770,12 @@ GLuint GeometryRender::loadTexture(const std::string& filePath){
     if (!data) {
         std::cerr << "Failed to load texture: " << filePath << std::endl;
         return 0;
+    }else{
+        std::cout << "Texture loaded " << std::endl;
+    }
+
+    if(locTexture != 0){
+        glDeleteTextures(1,&locTexture);
     }
 
     GLuint textureID;

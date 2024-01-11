@@ -75,7 +75,7 @@ private:
 
     //Texture
     GLuint locTexture = 0;
-    GLuint locTextureShow;
+    GLuint locTextureShowToShader;
     GLuint locTextureCoordinates;
 
 
