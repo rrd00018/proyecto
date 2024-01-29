@@ -21,7 +21,7 @@ uniform mat4 P;
 void main() {
     gl_Position = P * V * M * vPosition;
 
-    //Convierte la posicion del vertice a coordenadas del mundo
+    //Converts vertex position to world coordinates
     FragPos =  vec3(M * vPosition);
 
     float s = acos(vPosition.x/(1/sqrt(3)))/M_PI;

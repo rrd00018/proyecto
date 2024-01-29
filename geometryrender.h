@@ -51,6 +51,7 @@ private:
     GLuint locNormals;
 
     // Geometry data
+    std::vector<GLuint> indices;
     std::vector<glm::vec4> vertices;
     std::vector<glm::vec4> normals;
     std::vector<glm::vec2> textureCoordinates;

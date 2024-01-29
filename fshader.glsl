@@ -23,8 +23,7 @@ uniform int textureShow;
 
 void main()
 {
-
-    float ambientStrength = 0.1;
+    //ambient
     vec3 ambient = materialAmbient * ambientColor;
 
     // diffuse

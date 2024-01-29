@@ -17,7 +17,6 @@ void GeometryRender::initialize()
 {
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
     // Create and initialize a program object with shaders
     program = initProgram("vshader.glsl", "fshader.glsl");
 
@@ -74,6 +73,11 @@ void GeometryRender::initialize()
     glGenBuffers( 1, &vBuffer);
     glBindBuffer( GL_ARRAY_BUFFER, vBuffer);
 
+    /* Create buffer in the shared display list space and
+   bind it as GL_ELEMENT_ARRAY_BUFFER */
+    glGenBuffers(1, &iBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iBuffer);
+
     glBindVertexArray(0);
     glUseProgram(0);
 
@@ -88,7 +92,7 @@ void GeometryRender::loadGeometry(void)
     if(vertices.empty()) {
         // Define vertices in array
         objFilePath = "/home/rafa/CLionProjects/proyecto/resources";
-        objFileName = "sphere_large.obj";
+        objFileName = "cube.obj";
         loadObjFile();
     }
 
@@ -99,6 +103,11 @@ void GeometryRender::loadGeometry(void)
     size_t vSize = vertices.size()*sizeof(glm::vec4);
     size_t nSize = normals.size()*sizeof(glm::vec4);
     size_t tSize = textureCoordinates.size()*sizeof(glm::vec2);
+    size_t iSize = indices.size()*sizeof(GLuint);
+
+    //Index buffer
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, iSize, indices.data(), GL_STATIC_DRAW );
+
 
     //Verte buffer-> Contains position, normal, texture
     glBufferData(GL_ARRAY_BUFFER, vSize + nSize + tSize, NULL,GL_STATIC_DRAW);
@@ -120,6 +129,8 @@ void GeometryRender::loadGeometry(void)
 
     glBindVertexArray(0);
     glUseProgram(0);
+
+    //Default values to shader
 }
 
 // Check if any error has been reported from the shader
@@ -148,7 +159,7 @@ void GeometryRender::display()
     //Matrixes to shader
     glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(matModel));
     glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(matView));
-    glUniformMatrix4fv(locProjection, 1, GL_FALSE, glm::value_ptr(matProjection));
+    glUniformMatrix4fv(locProjection,1,GL_FALSE,glm::value_ptr(matProjection));
 
     //Lightning things to shader
     glUniform1f(locMaterialShininess,materialShininess);
@@ -168,12 +179,13 @@ void GeometryRender::display()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if(illuminationModel == 2)
+    if(illuminationModel == 1)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
     // Call OpenGL to draw the triangle not using indexes to allow the duplicate vertices and normals to work correctly as Oscar told me
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+    glDrawElements(GL_TRIANGLES, static_cast<int>(indices.size()), GL_UNSIGNED_INT , BUFFER_OFFSET(0));
+
     // Not to be called in release...
     debugShader();
 
@@ -371,34 +383,41 @@ void GeometryRender::keyCallBack(GLFWwindow *window, int key, int scancode, int 
 void GeometryRender::loadObjFile() {
     std::string nombre = objFilePath+"/"+objFileName;
     std::ifstream file(nombre);
-    std::vector<glm::vec4> verticesFinal;
     if (!file.is_open()) {
         std::cerr << "Error: Unable to open file: " << nombre << std::endl;
+        return;
     }
 
     vertices.clear();
+    indices.clear();
     normals.clear();
     textureCoordinates.clear();
 
-    std::vector<glm::vec4> normalsFinal;
+    std::vector<glm::vec4> normalesArchivo;
 
     std::string line;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
 
-        // Lee la primera palabra de la línea para determinar el tipo de entrada
+        // Reads first word in line to determine the type of processing
         std::string type;
         iss >> type;
 
-        // Procesa la entrada basada en su tipo
+        // Process the line based on the word type
         if (type == "v") {
-            // Lee las coordenadas de un vértice y crea un objeto Vec4 para representarlo
+            // Read the vertex coords and stores it
             glm::vec4 vertex(0, 0, 0, 1);
             iss >> vertex.x >> vertex.y >> vertex.z;
             vertices.push_back(vertex);
         } else if (type == "f") {
-            // Lee los índices de una cara y los agrega al vector de índices
-            std::string values = line.substr(2,line.size()-2); //Coge los datos eliminando el prefijo
+            if(normals.size() < vertices.size()){
+                normals.clear();
+                normals = std::vector<glm::vec4>(vertices.size());
+            }
+
+
+            // Read the indexes associated to a face and add them to the vector
+            std::string values = line.substr(2,line.size()-2);
             std::stringstream ss(values);
             std::vector<string> v;
             std::string token;
@@ -412,14 +431,13 @@ void GeometryRender::loadObjFile() {
                     std::string index;
                     getline(s1, index, '/');
                     int vertexIndex = stoi(index) -1;
-                    //Add to the vertex vector the vetex specified by the index (duplicate vertexs)
-                    verticesFinal.push_back(vertices[vertexIndex]);
+                    indices.push_back(vertexIndex);
                     //If normals have been read from the file
-                    if(!normals.empty()){
+                    if(!normalesArchivo.empty()){
                         size_t pos = v[i].find_last_of('/')+1;
                         int normalVertexIndex = stoi(v[i].substr(pos)) - 1;
                         //Adds to the normals vector the normal corresponding to that vertex
-                        normalsFinal.push_back(normals[normalVertexIndex]);
+                        normals[vertexIndex] += normalesArchivo[normalVertexIndex];
                     }
                 }
             }else if(v.size() == 4){
@@ -428,12 +446,12 @@ void GeometryRender::loadObjFile() {
                     std::string index;
                     getline(s1, index, '/');
                     int vertexIndex = stoi(index)-1;
-                    verticesFinal.push_back(vertices[vertexIndex]);
-                    if(!normals.empty()){
+                    indices.push_back(vertexIndex);
+                    if(!normalesArchivo.empty()){
                         size_t pos = v[i].find_last_of('/')+1;
                         int normalVertexIndex = stoi(v[i].substr(pos)) - 1;
                         //Adds to the normals vector the normal corresponding to that vertex
-                        normalsFinal.push_back(normals[normalVertexIndex]);
+                        normals[vertexIndex] += normalesArchivo[normalVertexIndex];
                     }
                 }
                 for (int i = 2; i < 5; i++) {
@@ -441,11 +459,11 @@ void GeometryRender::loadObjFile() {
                     std::string index;
                     getline(s1, index, '/');
                     int vertexIndex = stoi(index)-1;
-                    verticesFinal.push_back(vertices[vertexIndex]);
-                    if(!normals.empty()){
+                    indices.push_back(vertexIndex);
+                    if(!normalesArchivo.empty()){
                         size_t pos = v[i%4].find_last_of('/') + 1;
                         int normalVertexIndex = stoi(v[i%4].substr(pos)) -1;
-                        normalsFinal.push_back(normals[normalVertexIndex]);
+                        normals[vertexIndex] += normalesArchivo[normalVertexIndex];
                     }
                 }
             }
@@ -453,16 +471,14 @@ void GeometryRender::loadObjFile() {
         } else if (type == "vn"){
             glm::vec4 normal(0, 0, 0,0);
             iss >> normal.x >> normal.y >> normal.z;
-            normals.push_back(normal);
+            normalesArchivo.push_back(normal);
         } else if (type == "vt"){
-            /*glm::vec2 texture(0, 0);
+            glm::vec2 texture(0, 0);
             iss >> texture.x >> texture.y;
-            textureCoordinates.push_back(texture);*/
+            textureCoordinates.push_back(texture);
         }
     }
     file.close();
-
-    vertices = verticesFinal;
 
     //Calculate scalate factor as 1/maxDimension
     float maxDimension = std::max(std::max(verticesDimension(vertices, 0), verticesDimension(vertices, 1)), verticesDimension(vertices, 2));
@@ -476,13 +492,13 @@ void GeometryRender::loadObjFile() {
     }
 
     //Normal Calculation
-    if(normals.empty()){
+    if(normalesArchivo.empty()){
         normals = std::vector<glm::vec4>(vertices.size(), glm::vec4(0.0f));
         //Iterate through the triangles
-        for (size_t i = 0; i < vertices.size(); i += 3) {
-            glm::vec3 v0 = glm::vec3(vertices[i].x, vertices[i].y, vertices[i].z);
-            glm::vec3 v1 = glm::vec3(vertices[i+1].x, vertices[i+1].y, vertices[i+1].z);
-            glm::vec3 v2 = glm::vec3(vertices[i+2].x, vertices[i+2].y, vertices[i+2].z);
+        for (size_t i = 0; i < indices.size(); i += 3) {
+            glm::vec3 v0 = glm::vec3(vertices[indices[i]].x, vertices[indices[i]].y, vertices[indices[i]].z);
+            glm::vec3 v1 = glm::vec3(vertices[indices[i+1]].x, vertices[indices[i+1]].y, vertices[indices[i+1]].z);
+            glm::vec3 v2 = glm::vec3(vertices[indices[i+2]].x, vertices[indices[i+2]].y, vertices[indices[i+2]].z);
 
             glm::vec3 eje1 = v1 - v0;
             glm::vec3 eje2 = v2 - v0;
@@ -490,18 +506,16 @@ void GeometryRender::loadObjFile() {
             glm::vec3 normal = glm::cross(eje1,eje2);
 
             for(int j = 0; j < 3; j++){
-                normals[i+j] = glm::vec4(normal,0); //w = 0 as is a vector
+                normals[indices[i+j]] = glm::vec4(normal,0); //w = 0 as is a vector
             }
         }
-        // Normalize the normals
-        for (size_t i = 0; i < normals.size(); i++) {
-            normals[i] = glm::vec4(glm::normalize(normals[i]));
-        }
-    }else{
-        normals = normalsFinal;
+
     }
 
-
+    // Normalize the normals
+    for (size_t i = 0; i < normals.size(); i++) {
+        normals[i] = glm::vec4(glm::normalize(normals[i]));
+    }
 
     //Texture coordinates calculation
     for(size_t i = 0; i < vertices.size(); i++){
@@ -516,17 +530,7 @@ void GeometryRender::loadObjFile() {
     lookAt = glm::vec3(0.0f, 0.0f, 0.0f);
     upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     matView = glm::lookAt(cameraPosition, lookAt, upVector);
-/*
-    std::cout << "Imprimiendo coordenadas de las normales: " << normals.size() << std::endl;
-    for(size_t i = 0; i < normals.size(); i++){
-        std::cout << normals[i].x << " " << normals[i].y << " " << normals[i].z << std::endl;
-    }
-    std::cout << std::endl;
-    std::cout << "Imprimiendo coordenadas de los vertices: " << vertices.size() << std::endl;
-    for(size_t i = 0; i < vertices.size(); i++){
-        std::cout << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;
-    }
-*/
+
     loadGeometry();
 }
 
@@ -554,12 +558,11 @@ float GeometryRender::verticesDimension(const std::vector<glm::vec4>& vertices, 
 
 
 /**
- * @brief Calcula la translacion necesaria para llevar una figura al origen
- * @param vertices vector de vertices de la figura
+ * @brief Calculates the necessary translation to get the figure to the origin
+ * @param vertices vertex vector of the figure
  * @return
  */
 glm::vec4 GeometryRender::getOrigin(const std::vector<glm::vec4>& vertices){
-    // Calcular el centro de masa de la figura
     glm::vec4 center (0.0f, 0.0f, 0.0f, 0.0f);
     for (const auto& vertex : vertices) {
         center[0] += vertex.x;
@@ -604,7 +607,11 @@ void GeometryRender::DrawGui() {
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Text("Light source position");
         ImGui::PushItemWidth(100);
-        ImGui::InputFloat3("Light Pos", glm::value_ptr(lightPos), "%.1f");
+        ImGui::InputFloat("x", &lightPos[0], 0.5f, 1.0f, "%1.1f");
+        ImGui::SameLine();
+        ImGui::InputFloat("y", &lightPos[1], 0.5f, 1.0f, "%1.1f");
+        ImGui::SameLine();
+        ImGui::InputFloat("z", &lightPos[2], 0.5f, 1.0f, "%1.1f");
         ImGui::PopItemWidth();
 
         ImGui::Text("Light source intensity:");
@@ -696,11 +703,9 @@ void GeometryRender::DrawGui() {
         if (ImGui::Combo("Shading model", &shading_current_idx, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)));
         if(shading_current_idx == 0){
             illuminationModel = 0;
-            std::cout << illuminationModel << " Phong model activated" << std::endl;
         }
         if(shading_current_idx == 1){
             illuminationModel = 1;
-            std::cout << illuminationModel << " Wireframe model activated" << std::endl;
         }
     }
 
@@ -786,7 +791,7 @@ GLuint GeometryRender::loadTexture(const std::string& filePath){
 }
 
 /**
- * Binds the texture to be used
+ * @brief Binds the texture to be used
  */
 void GeometryRender::activateTexture() {
     glActiveTexture(GL_TEXTURE0);
@@ -795,7 +800,7 @@ void GeometryRender::activateTexture() {
 }
 
 /**
- * Unbind the texture
+ * @brief Unbind the texture
  */
 void GeometryRender::deactivateTexture() {
     glActiveTexture(GL_TEXTURE0);
